@@ -18,189 +18,209 @@ import {
   Settings,
   Calendar,
   School,
+  FolderOpen,
   LucideIcon
 } from 'lucide-react'
+
+// Roles del sistema
+export type RoleName = 'administrador' | 'coordinador' | 'docente' | 'estudiante'
 
 export interface NavItem {
   title: string
   url: string
   icon: LucideIcon
-  permission?: string
+  roles?: RoleName[] // Si está vacío o undefined, todos pueden ver
   children?: NavItem[]
 }
 
 export interface NavSection {
   title: string
   items: NavItem[]
+  roles?: RoleName[] // Si está vacío, todos pueden ver la sección
 }
 
-// Navigation configuration based on permissions
+// Navegación basada en roles
 export const navigationConfig: NavSection[] = [
   {
-    title: 'Platform',
+    title: 'Principal',
     items: [
       {
         title: 'Vista general',
         url: '/dashboard',
-        icon: LayoutDashboard,
-        permission: 'dashboard.view'
+        icon: LayoutDashboard
+        // Todos pueden ver el dashboard
+      }
+    ]
+  },
+  {
+    title: 'Docencia',
+    roles: ['administrador', 'coordinador', 'docente'],
+    items: [
+      {
+        title: 'Informes de asignatura',
+        url: '/dashboard/docencia/informes',
+        icon: FileText,
+        roles: ['administrador', 'coordinador', 'docente']
       },
       {
-        title: 'Docencia',
-        url: '/dashboard/docencia',
-        icon: GraduationCap,
-        permission: 'silabos.view',
-        children: [
-          {
-            title: 'Informes de asignatura',
-            url: '/dashboard/docencia/informes',
-            icon: FileText,
-            permission: 'informes.view'
-          },
-          {
-            title: 'Informes de silabo',
-            url: '/dashboard/docencia/silabos',
-            icon: BookOpen,
-            permission: 'silabos.view'
-          }
-        ]
+        title: 'Silabos',
+        url: '/dashboard/docencia/silabos',
+        icon: BookOpen,
+        roles: ['administrador', 'coordinador', 'docente']
       },
       {
-        title: 'Investigacion',
-        url: '/dashboard/investigacion',
+        title: 'Portafolios',
+        url: '/dashboard/docencia/portafolios',
+        icon: FolderOpen,
+        roles: ['administrador', 'coordinador', 'docente']
+      }
+    ]
+  },
+  {
+    title: 'Investigacion',
+    roles: ['administrador', 'coordinador', 'docente'],
+    items: [
+      {
+        title: 'Informes de investigacion',
+        url: '/dashboard/investigacion/informes',
         icon: Microscope,
-        permission: 'investigacion.view',
-        children: [
-          {
-            title: 'Informes',
-            url: '/dashboard/investigacion/informes',
-            icon: ClipboardList,
-            permission: 'investigacion.view'
-          }
-        ]
+        roles: ['administrador', 'coordinador', 'docente']
+      }
+    ]
+  },
+  {
+    title: 'Estudiantes',
+    roles: ['administrador', 'coordinador', 'docente'],
+    items: [
+      {
+        title: 'Matriculados',
+        url: '/dashboard/estudiantes/matriculados',
+        icon: UserCheck,
+        roles: ['administrador', 'coordinador', 'docente']
       },
       {
-        title: 'Estudiantes',
-        url: '/dashboard/estudiantes',
+        title: 'Activos',
+        url: '/dashboard/estudiantes/activos',
         icon: Users,
-        permission: 'estudiantes.view',
-        children: [
-          {
-            title: 'Estudiantes matriculados',
-            url: '/dashboard/estudiantes/matriculados',
-            icon: UserCheck,
-            permission: 'estudiantes.view'
-          },
-          {
-            title: 'Estudiantes activos',
-            url: '/dashboard/estudiantes/activos',
-            icon: Users,
-            permission: 'estudiantes.view'
-          },
-          {
-            title: 'Estudiantes retirados',
-            url: '/dashboard/estudiantes/retirados',
-            icon: UserX,
-            permission: 'estudiantes.view'
-          },
-          {
-            title: 'Faltas',
-            url: '/dashboard/estudiantes/faltas',
-            icon: AlertCircle,
-            permission: 'estudiantes.faltas'
-          },
-          {
-            title: 'Justificaciones de faltas',
-            url: '/dashboard/estudiantes/justificaciones',
-            icon: FileCheck,
-            permission: 'estudiantes.faltas'
-          }
-        ]
+        roles: ['administrador', 'coordinador', 'docente']
       },
       {
-        title: 'Practicas de Laboratorio',
+        title: 'Retirados',
+        url: '/dashboard/estudiantes/retirados',
+        icon: UserX,
+        roles: ['administrador', 'coordinador']
+      },
+      {
+        title: 'Documentos',
+        url: '/dashboard/estudiantes/documentos',
+        icon: FileText,
+        roles: ['administrador', 'coordinador', 'docente']
+      },
+      {
+        title: 'Faltas',
+        url: '/dashboard/estudiantes/faltas',
+        icon: AlertCircle,
+        roles: ['administrador', 'coordinador', 'docente']
+      },
+      {
+        title: 'Justificaciones',
+        url: '/dashboard/estudiantes/justificaciones',
+        icon: FileCheck,
+        roles: ['administrador', 'coordinador', 'docente']
+      }
+    ]
+  },
+  {
+    title: 'Laboratorio',
+    roles: ['administrador', 'coordinador', 'docente'],
+    items: [
+      {
+        title: 'Practicas',
         url: '/dashboard/laboratorio',
         icon: FlaskConical,
-        permission: 'laboratorio.view'
-      },
+        roles: ['administrador', 'coordinador', 'docente']
+      }
+    ]
+  },
+  {
+    title: 'Vinculacion',
+    roles: ['administrador', 'coordinador'],
+    items: [
       {
-        title: 'Vinculacion',
-        url: '/dashboard/vinculacion',
+        title: 'Lideres de vinculacion',
+        url: '/dashboard/vinculacion/lideres',
         icon: Handshake,
-        permission: 'vinculacion.view',
-        children: [
-          {
-            title: 'Lideres de vinculacion',
-            url: '/dashboard/vinculacion/lideres',
-            icon: Building2,
-            permission: 'vinculacion.view'
-          }
-        ]
-      },
+        roles: ['administrador', 'coordinador']
+      }
+    ]
+  },
+  {
+    title: 'Titulacion',
+    roles: ['administrador', 'coordinador', 'docente'],
+    items: [
       {
-        title: 'Titulacion',
-        url: '/dashboard/titulacion',
+        title: 'Temas en desarrollo',
+        url: '/dashboard/titulacion/temas',
         icon: Award,
-        permission: 'titulacion.view',
-        children: [
-          {
-            title: 'Temas en desarrollo',
-            url: '/dashboard/titulacion/temas',
-            icon: BookMarked,
-            permission: 'titulacion.view'
-          }
-        ]
+        roles: ['administrador', 'coordinador', 'docente']
       }
     ]
   },
   {
     title: 'Administracion',
+    roles: ['administrador'],
     items: [
       {
         title: 'Usuarios',
         url: '/dashboard/admin/usuarios',
         icon: Users,
-        permission: 'users.manage'
+        roles: ['administrador']
       },
       {
         title: 'Carreras',
         url: '/dashboard/admin/carreras',
         icon: School,
-        permission: 'careers.manage'
+        roles: ['administrador']
       },
       {
         title: 'Periodos',
         url: '/dashboard/admin/periodos',
         icon: Calendar,
-        permission: 'periods.manage'
+        roles: ['administrador']
       },
       {
         title: 'Configuracion',
         url: '/dashboard/admin/configuracion',
         icon: Settings,
-        permission: 'settings.manage'
+        roles: ['administrador']
       }
     ]
   }
 ]
 
-// Filter navigation based on user permissions
+// Filtrar navegación basada en rol del usuario
 export function filterNavigation(
   config: NavSection[], 
-  permissions: string[], 
-  isSuperAdmin: boolean
+  userRole: RoleName | null
 ): NavSection[] {
-  if (isSuperAdmin) return config
+  if (!userRole) return []
+  
+  // Administrador ve todo
+  if (userRole === 'administrador') return config
 
-  return config.map(section => ({
-    ...section,
-    items: section.items
-      .filter(item => !item.permission || permissions.includes(item.permission))
-      .map(item => ({
-        ...item,
-        children: item.children?.filter(
-          child => !child.permission || permissions.includes(child.permission)
-        )
-      }))
-  })).filter(section => section.items.length > 0)
+  return config
+    .filter(section => {
+      // Si la sección no tiene roles definidos, todos la ven
+      if (!section.roles || section.roles.length === 0) return true
+      return section.roles.includes(userRole)
+    })
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        // Si el item no tiene roles definidos, todos lo ven
+        if (!item.roles || item.roles.length === 0) return true
+        return item.roles.includes(userRole)
+      })
+    }))
+    .filter(section => section.items.length > 0)
 }

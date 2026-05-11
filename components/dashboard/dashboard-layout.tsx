@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown, ChevronRight, LogOut, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuth, usePermission } from '@/lib/auth/auth-context'
-import { navigationConfig, filterNavigation, NavItem } from '@/lib/navigation'
+import { useAuth } from '@/lib/auth/auth-context'
+import { navigationConfig, filterNavigation, NavItem, RoleName } from '@/lib/navigation'
 import {
   Sidebar,
   SidebarContent,
@@ -101,18 +101,23 @@ function NavItemComponent({ item, isActive }: { item: NavItem; isActive: boolean
 }
 
 function AppSidebar() {
-  const { profile, role, permissions, signOut, loading } = useAuth()
+  const { profile, role, roleName, signOut, loading } = useAuth()
   const pathname = usePathname()
   
-  console.log('[v0] AppSidebar - permissions:', permissions, 'role:', role?.nombre, 'loading:', loading)
-  
-  const isSuperAdmin = role?.nombre === 'super_admin' || role?.nombre === 'administrador'
-  const filteredNav = filterNavigation(navigationConfig, permissions, isSuperAdmin)
-  
-  console.log('[v0] Filtered nav sections:', filteredNav.length, 'items:', filteredNav.flatMap(s => s.items).length)
+  const filteredNav = filterNavigation(navigationConfig, roleName)
 
   const getInitials = (nombres: string, apellidos: string) => {
     return `${nombres.charAt(0)}${apellidos.charAt(0)}`.toUpperCase()
+  }
+
+  const getRoleBadgeColor = (rol: string | null) => {
+    switch (rol) {
+      case 'administrador': return 'bg-red-100 text-red-800'
+      case 'coordinador': return 'bg-blue-100 text-blue-800'
+      case 'docente': return 'bg-green-100 text-green-800'
+      case 'estudiante': return 'bg-yellow-100 text-yellow-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
   }
 
   return (
@@ -124,7 +129,7 @@ function AppSidebar() {
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-semibold">SISPAA</span>
-            <span className="text-xs text-muted-foreground">Platform</span>
+            <span className="text-xs text-muted-foreground">ULEAM</span>
           </div>
         </Link>
       </SidebarHeader>
@@ -170,8 +175,11 @@ function AppSidebar() {
                 <span className="text-sm font-medium truncate w-full">
                   {profile ? `${profile.nombres} ${profile.apellidos}` : 'Usuario'}
                 </span>
-                <span className="text-xs text-muted-foreground capitalize truncate w-full">
-                  {role?.nombre?.replace('_', ' ') || 'Sin rol'}
+                <span className={cn(
+                  "text-xs px-2 py-0.5 rounded-full capitalize",
+                  getRoleBadgeColor(roleName)
+                )}>
+                  {roleName || 'Sin rol'}
                 </span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -180,12 +188,6 @@ function AppSidebar() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem asChild>
               <Link href="/dashboard/perfil">Mi Perfil</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/notificaciones">
-                <Bell className="mr-2 h-4 w-4" />
-                Notificaciones
-              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={signOut} className="text-destructive">
@@ -208,11 +210,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-6">
             <SidebarTrigger />
             <div className="flex-1" />
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/dashboard/notificaciones">
-                <Bell className="h-5 w-5" />
-              </Link>
-            </Button>
           </header>
           <main className="flex-1 p-6">
             {children}

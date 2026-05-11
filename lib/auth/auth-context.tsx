@@ -3,13 +3,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, Role, Permiso } from '@/lib/types/database'
+import { Profile, Role } from '@/lib/types/database'
+import type { RoleName } from '@/lib/navigation'
 
 interface AuthContextType {
   user: User | null
   profile: Profile | null
   role: Role | null
-  permissions: string[]
+  roleName: RoleName | null
   loading: boolean
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -21,14 +22,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [role, setRole] = useState<Role | null>(null)
-  const [permissions, setPermissions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   
   const supabase = createClient()
 
   const fetchUserData = async (userId: string) => {
-    console.log('[v0] Fetching user data for:', userId)
-    
     // Fetch profile with role
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -39,43 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', userId)
       .single()
 
-    console.log('[v0] Profile data:', profileData, 'Error:', profileError)
-
     if (profileData) {
       setProfile(profileData as Profile)
       setRole(profileData.rol as Role)
-      console.log('[v0] Role set to:', profileData.rol)
-
-      // Fetch permissions for the role
-      if (profileData.rol_id) {
-        console.log('[v0] Fetching permissions for rol_id:', profileData.rol_id)
-        
-        const { data: rolePermisos, error: permisosError } = await supabase
-          .from('roles_permisos')
-          .select(`
-            permiso:permisos(nombre)
-          `)
-          .eq('rol_id', profileData.rol_id)
-
-        console.log('[v0] Role permisos:', rolePermisos, 'Error:', permisosError)
-
-        const permisoNames = rolePermisos?.map((rp: { permiso: { nombre: string } }) => rp.permiso?.nombre).filter(Boolean) || []
-        console.log('[v0] Permiso names:', permisoNames)
-        
-        // Also fetch extra permissions for the user
-        const { data: extraPermisos } = await supabase
-          .from('usuarios_permisos_extra')
-          .select(`
-            permiso:permisos(nombre)
-          `)
-          .eq('user_id', userId)
-
-        const extraPermisoNames = extraPermisos?.map((ep: { permiso: { nombre: string } }) => ep.permiso?.nombre).filter(Boolean) || []
-        
-        const allPermissions = [...new Set([...permisoNames, ...extraPermisoNames])]
-        console.log('[v0] All permissions:', allPermissions)
-        setPermissions(allPermissions)
-      }
     }
   }
 
@@ -107,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null)
         setRole(null)
-        setPermissions([])
       }
       
       setLoading(false)
@@ -121,11 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     setProfile(null)
     setRole(null)
-    setPermissions([])
   }
 
+  const roleName = role?.nombre as RoleName | null
+
   return (
-    <AuthContext.Provider value={{ user, profile, role, permissions, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, role, roleName, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )
@@ -139,30 +103,18 @@ export function useAuth() {
   return context
 }
 
-// Hook to check if user has a specific permission
-export function usePermission(permission: string): boolean {
-  const { permissions, role } = useAuth()
+// Hook para verificar si el usuario tiene un rol específico
+export function useHasRole(roles: RoleName | RoleName[]): boolean {
+  const { roleName } = useAuth()
   
-  // Super admin has all permissions
-  if (role?.nombre === 'super_admin') return true
+  if (!roleName) return false
   
-  return permissions.includes(permission)
+  const roleArray = Array.isArray(roles) ? roles : [roles]
+  return roleArray.includes(roleName)
 }
 
-// Hook to check if user has any of the specified permissions
-export function useAnyPermission(permissionList: string[]): boolean {
-  const { permissions, role } = useAuth()
-  
-  if (role?.nombre === 'super_admin') return true
-  
-  return permissionList.some(p => permissions.includes(p))
-}
-
-// Hook to check if user has all of the specified permissions
-export function useAllPermissions(permissionList: string[]): boolean {
-  const { permissions, role } = useAuth()
-  
-  if (role?.nombre === 'super_admin') return true
-  
-  return permissionList.every(p => permissions.includes(p))
+// Hook para verificar si es administrador
+export function useIsAdmin(): boolean {
+  const { roleName } = useAuth()
+  return roleName === 'administrador'
 }

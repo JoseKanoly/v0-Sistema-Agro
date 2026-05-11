@@ -1,115 +1,198 @@
-'use client';
+"use client"
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Plus } from 'lucide-react';
-
-interface Usuario {
-  id: string;
-  nombres: string;
-  apellidos: string;
-  email: string;
-  rol_id: string;
-  activo: boolean;
-}
+import { useState } from "react"
+import { useData } from "@/lib/mock/store"
+import { AccessGuard } from "@/components/access-guard"
+import { PageHeader } from "@/components/page-header"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { ROLE_LABELS, ROLE_BADGE_CLASSES } from "@/lib/navigation"
+import { CARRERAS } from "@/lib/mock/carreras"
+import type { UserRole, Usuario } from "@/lib/types/database"
+import { Search, Power, ShieldCheck, ShieldOff } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default function AdminUsuariosPage() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const supabase = createClient();
+  return (
+    <AccessGuard roles={["super_admin"]}>
+      <UsuariosContent />
+    </AccessGuard>
+  )
+}
 
-  useEffect(() => {
-    const fetchUsuarios = async () => {
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('apellidos', { ascending: true });
+function UsuariosContent() {
+  const { usuarios, setUsuarios } = useData()
+  const [search, setSearch] = useState("")
+  const [rolFilter, setRolFilter] = useState<UserRole | "todos">("todos")
 
-        if (data) {
-          setUsuarios(data);
-        }
-      } catch (error) {
-        console.error('[v0] Error fetching usuarios:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const filtered = usuarios.filter((u) => {
+    const matchSearch =
+      `${u.nombres} ${u.apellidos} ${u.email} ${u.cedula}`.toLowerCase().includes(search.toLowerCase())
+    const matchRol = rolFilter === "todos" || u.rol === rolFilter
+    return matchSearch && matchRol
+  })
 
-    fetchUsuarios();
-  }, []);
+  const toggleActivo = (id: string) => {
+    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, activo: !u.activo } : u)))
+  }
 
-  const filteredUsuarios = usuarios.filter((user) =>
-    `${user.nombres} ${user.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const toggleVinculacion = (id: string) => {
+    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, tiene_vinculacion: !u.tiene_vinculacion } : u)))
+  }
 
-  if (loading) {
-    return <div className="p-6">Cargando...</div>;
+  const toggleInvestigacion = (id: string) => {
+    setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...u, tiene_investigacion: !u.tiene_investigacion } : u)))
+  }
+
+  const stats = {
+    total: usuarios.length,
+    activos: usuarios.filter((u) => u.activo).length,
+    docentes: usuarios.filter((u) => u.rol === "docente").length,
+    estudiantes: usuarios.filter((u) => u.rol === "estudiante").length,
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground mt-2">Total: {usuarios.length} usuarios</p>
-        </div>
-        <Button className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nuevo Usuario
-        </Button>
-      </div>
-
-      <Input
-        placeholder="Buscar por nombre o email..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="max-w-md"
+    <div className="space-y-6">
+      <PageHeader
+        title="Gestion de usuarios"
+        description="Administra cuentas, roles y asignaciones del sistema"
       />
 
-      <div className="grid gap-4">
-        {filteredUsuarios.length === 0 ? (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total" value={stats.total} />
+        <StatCard label="Activos" value={stats.activos} />
+        <StatCard label="Docentes" value={stats.docentes} />
+        <StatCard label="Estudiantes" value={stats.estudiantes} />
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, email o cedula..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={rolFilter} onValueChange={(v) => setRolFilter(v as UserRole | "todos")}>
+          <SelectTrigger className="sm:w-60">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los roles</SelectItem>
+            {Object.entries(ROLE_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        {filtered.map((u) => (
+          <UsuarioRow
+            key={u.id}
+            user={u}
+            onToggleActivo={() => toggleActivo(u.id)}
+            onToggleVinc={() => toggleVinculacion(u.id)}
+            onToggleInv={() => toggleInvestigacion(u.id)}
+          />
+        ))}
+        {filtered.length === 0 && (
           <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No hay usuarios que coincidan</p>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              No se encontraron usuarios con esos filtros.
             </CardContent>
           </Card>
-        ) : (
-          filteredUsuarios.map((usuario) => (
-            <Card key={usuario.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {usuario.nombres} {usuario.apellidos}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{usuario.email}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        usuario.activo
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-                      }`}
-                    >
-                      {usuario.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                    <Button variant="outline" size="sm">
-                      Editar
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
         )}
       </div>
     </div>
-  );
+  )
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <p className="text-xs font-medium uppercase text-muted-foreground">{label}</p>
+        <p className="mt-1 text-2xl font-semibold">{value}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function UsuarioRow({
+  user,
+  onToggleActivo,
+  onToggleVinc,
+  onToggleInv,
+}: {
+  user: Usuario
+  onToggleActivo: () => void
+  onToggleVinc: () => void
+  onToggleInv: () => void
+}) {
+  const carrera = CARRERAS.find((c) => c.id === user.carrera_id)
+  return (
+    <Card className={cn(!user.activo && "opacity-60")}>
+      <CardContent className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">
+              {user.nombres} {user.apellidos}
+            </span>
+            <span
+              className={cn(
+                "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+                ROLE_BADGE_CLASSES[user.rol],
+              )}
+            >
+              {ROLE_LABELS[user.rol]}
+            </span>
+            {!user.activo && <Badge variant="outline">Inactivo</Badge>}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {user.email} - Cedula: {user.cedula}
+            {carrera && ` - ${carrera.nombre}`}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {user.rol === "docente" && (
+            <>
+              <Button
+                size="sm"
+                variant={user.tiene_vinculacion ? "default" : "outline"}
+                onClick={onToggleVinc}
+              >
+                Vinculacion
+              </Button>
+              <Button
+                size="sm"
+                variant={user.tiene_investigacion ? "default" : "outline"}
+                onClick={onToggleInv}
+              >
+                Investigacion
+              </Button>
+            </>
+          )}
+          <Button size="sm" variant="outline" onClick={onToggleActivo}>
+            {user.activo ? <ShieldOff className="mr-1 h-3.5 w-3.5" /> : <ShieldCheck className="mr-1 h-3.5 w-3.5" />}
+            {user.activo ? "Desactivar" : "Activar"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }

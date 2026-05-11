@@ -1,241 +1,144 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { useAuth } from '@/lib/auth/auth-context'
-import { createClient } from '@/lib/supabase/client'
-import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { User, Mail, Phone, Building2, Shield, Save, Loader2 } from 'lucide-react'
+import { useState } from "react"
+import { useAuth } from "@/lib/auth/auth-context"
+import { useData } from "@/lib/mock/store"
+import { PageHeader } from "@/components/page-header"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Save, CheckCircle2 } from "lucide-react"
+import { ROLE_LABELS, ROLE_BADGE_CLASSES } from "@/lib/navigation"
+import { CARRERAS } from "@/lib/mock/carreras"
+import { cn } from "@/lib/utils"
 
 export default function PerfilPage() {
-  const { user, profile, role, permissions, refreshProfile } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  
-  const [formData, setFormData] = useState({
-    nombres: profile?.nombres || '',
-    apellidos: profile?.apellidos || '',
-    telefono: profile?.telefono || '',
-    cedula: profile?.cedula || ''
+  const { user } = useAuth()
+  const { setUsuarios } = useData()
+  const [saved, setSaved] = useState(false)
+  const [form, setForm] = useState({
+    nombres: user?.nombres ?? "",
+    apellidos: user?.apellidos ?? "",
+    cedula: user?.cedula ?? "",
   })
 
-  const supabase = createClient()
+  if (!user) return null
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const carrera = CARRERAS.find((c) => c.id === user.carrera_id)
+  const initials = `${user.nombres.charAt(0)}${user.apellidos.charAt(0)}`.toUpperCase()
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
-
-    setLoading(true)
-    setMessage(null)
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          nombres: formData.nombres,
-          apellidos: formData.apellidos,
-          telefono: formData.telefono,
-          cedula: formData.cedula
-        })
-        .eq('id', user.id)
-
-      if (error) throw error
-
-      await refreshProfile()
-      setMessage({ type: 'success', text: 'Perfil actualizado correctamente' })
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Error al actualizar el perfil' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getInitials = (nombres: string, apellidos: string) => {
-    return `${nombres?.charAt(0) || ''}${apellidos?.charAt(0) || ''}`.toUpperCase()
+    setUsuarios((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...form } : u)))
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mi Perfil</h1>
-          <p className="text-muted-foreground">
-            Gestiona tu informacion personal y preferencias
-          </p>
-        </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader title="Mi perfil" description="Tu informacion personal en SISPAA" />
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Profile Card */}
-          <Card className="md:col-span-1">
-            <CardHeader className="text-center">
-              <Avatar className="mx-auto h-24 w-24">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                  {profile ? getInitials(profile.nombres, profile.apellidos) : 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <CardTitle className="mt-4">
-                {profile ? `${profile.nombres} ${profile.apellidos}` : 'Usuario'}
-              </CardTitle>
-              <CardDescription>{user?.email}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-center gap-2">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                <Badge variant="secondary" className="capitalize">
-                  {role?.nombre?.replace('_', ' ') || 'Sin rol'}
-                </Badge>
-              </div>
-              
-              {profile?.carrera_id && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Building2 className="h-4 w-4" />
-                  <span>Carrera asignada</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Edit Form */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Informacion Personal</CardTitle>
-              <CardDescription>
-                Actualiza tu informacion de contacto
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="nombres">Nombres</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="nombres"
-                        value={formData.nombres}
-                        onChange={(e) => setFormData({ ...formData, nombres: e.target.value })}
-                        className="pl-9"
-                        placeholder="Tus nombres"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="apellidos">Apellidos</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="apellidos"
-                        value={formData.apellidos}
-                        onChange={(e) => setFormData({ ...formData, apellidos: e.target.value })}
-                        className="pl-9"
-                        placeholder="Tus apellidos"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electronico</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      value={user?.email || ''}
-                      disabled
-                      className="pl-9 bg-muted"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    El correo electronico no puede ser modificado
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="cedula">Cedula</Label>
-                    <Input
-                      id="cedula"
-                      value={formData.cedula}
-                      onChange={(e) => setFormData({ ...formData, cedula: e.target.value })}
-                      placeholder="1234567890"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="telefono">Telefono</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="telefono"
-                        value={formData.telefono}
-                        onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                        className="pl-9"
-                        placeholder="+593 999 999 999"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {message && (
-                  <div
-                    className={`rounded-md p-3 text-sm ${
-                      message.type === 'success'
-                        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                        : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
-                    }`}
-                  >
-                    {message.text}
-                  </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="md:col-span-1">
+          <CardHeader className="items-center text-center">
+            <Avatar className="mx-auto h-20 w-20">
+              <AvatarFallback className="bg-primary text-2xl text-primary-foreground">{initials}</AvatarFallback>
+            </Avatar>
+            <CardTitle className="mt-3 text-lg">
+              {user.nombres} {user.apellidos}
+            </CardTitle>
+            <CardDescription>{user.email}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-center">
+              <span
+                className={cn(
+                  "inline-flex rounded-full px-3 py-1 text-xs font-medium",
+                  ROLE_BADGE_CLASSES[user.rol],
                 )}
-
-                <Button type="submit" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Guardar Cambios
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Permissions Card */}
-          <Card className="md:col-span-3">
-            <CardHeader>
-              <CardTitle>Permisos Asignados</CardTitle>
-              <CardDescription>
-                Lista de permisos asociados a tu rol
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {permissions.length > 0 ? (
-                  permissions.map((permission) => (
-                    <Badge key={permission} variant="outline">
-                      {permission}
-                    </Badge>
-                  ))
+              >
+                {ROLE_LABELS[user.rol]}
+              </span>
+            </div>
+            {carrera && (
+              <div className="rounded-md border bg-muted/40 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Carrera</p>
+                <p className="font-medium">{carrera.nombre}</p>
+              </div>
+            )}
+            {user.rol === "docente" && (
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
+                {user.tiene_vinculacion ? (
+                  <Badge variant="secondary">Vinculacion asignada</Badge>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No tienes permisos asignados
-                  </p>
+                  <Badge variant="outline">Sin vinculacion</Badge>
+                )}
+                {user.tiene_investigacion ? (
+                  <Badge variant="secondary">Investigacion asignada</Badge>
+                ) : (
+                  <Badge variant="outline">Sin investigacion</Badge>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Editar informacion</CardTitle>
+            <CardDescription>Actualiza tus datos personales</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nombres">Nombres</Label>
+                  <Input
+                    id="nombres"
+                    value={form.nombres}
+                    onChange={(e) => setForm({ ...form, nombres: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="apellidos">Apellidos</Label>
+                  <Input
+                    id="apellidos"
+                    value={form.apellidos}
+                    onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cedula">Cedula</Label>
+                <Input
+                  id="cedula"
+                  value={form.cedula}
+                  onChange={(e) => setForm({ ...form, cedula: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Correo institucional</Label>
+                <Input id="email" value={user.email} disabled className="bg-muted" />
+                <p className="text-xs text-muted-foreground">El correo institucional no se puede modificar.</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button type="submit">
+                  <Save className="mr-2 h-4 w-4" /> Guardar cambios
+                </Button>
+                {saved && (
+                  <span className="inline-flex items-center gap-1.5 text-sm text-emerald-700">
+                    <CheckCircle2 className="h-4 w-4" /> Datos guardados
+                  </span>
+                )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
-    </DashboardLayout>
+    </div>
   )
 }

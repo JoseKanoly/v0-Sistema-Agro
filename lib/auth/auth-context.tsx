@@ -27,8 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
 
   const fetchUserData = async (userId: string) => {
+    console.log('[v0] Fetching user data for:', userId)
+    
     // Fetch profile with role
-    const { data: profileData } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(`
         *,
@@ -37,20 +39,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', userId)
       .single()
 
+    console.log('[v0] Profile data:', profileData, 'Error:', profileError)
+
     if (profileData) {
       setProfile(profileData as Profile)
       setRole(profileData.rol as Role)
+      console.log('[v0] Role set to:', profileData.rol)
 
       // Fetch permissions for the role
       if (profileData.rol_id) {
-        const { data: rolePermisos } = await supabase
+        console.log('[v0] Fetching permissions for rol_id:', profileData.rol_id)
+        
+        const { data: rolePermisos, error: permisosError } = await supabase
           .from('roles_permisos')
           .select(`
             permiso:permisos(nombre)
           `)
           .eq('rol_id', profileData.rol_id)
 
-        const permisoNames = rolePermisos?.map((rp: { permiso: { nombre: string } }) => rp.permiso.nombre) || []
+        console.log('[v0] Role permisos:', rolePermisos, 'Error:', permisosError)
+
+        const permisoNames = rolePermisos?.map((rp: { permiso: { nombre: string } }) => rp.permiso?.nombre).filter(Boolean) || []
+        console.log('[v0] Permiso names:', permisoNames)
         
         // Also fetch extra permissions for the user
         const { data: extraPermisos } = await supabase
@@ -60,9 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           `)
           .eq('user_id', userId)
 
-        const extraPermisoNames = extraPermisos?.map((ep: { permiso: { nombre: string } }) => ep.permiso.nombre) || []
+        const extraPermisoNames = extraPermisos?.map((ep: { permiso: { nombre: string } }) => ep.permiso?.nombre).filter(Boolean) || []
         
-        setPermissions([...new Set([...permisoNames, ...extraPermisoNames])])
+        const allPermissions = [...new Set([...permisoNames, ...extraPermisoNames])]
+        console.log('[v0] All permissions:', allPermissions)
+        setPermissions(allPermissions)
       }
     }
   }

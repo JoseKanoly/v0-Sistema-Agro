@@ -6,6 +6,8 @@ import { useData } from "@/lib/mock/store"
 import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
+import { ConvocatoriaBanner } from "@/components/convocatoria-banner"
+import { ExportButtons } from "@/components/export-buttons"
 import {
   Card,
   CardContent,
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/select"
 import { TIPOS_FALTA, type Justificacion, type TipoFalta } from "@/lib/types/database"
 import { Plus, FileUp } from "lucide-react"
+import type { ExportColumn } from "@/lib/utils/export"
 
 export default function MisJustificacionesPage() {
   return (
@@ -40,9 +43,6 @@ function Content() {
   const { justificaciones, setJustificaciones, agregarNotificacion } = useData()
   const [showForm, setShowForm] = useState(false)
 
-  if (!user) return null
-  const mias = justificaciones.filter((j) => j.solicitante_id === user.id)
-
   const [form, setForm] = useState({
     materia: "",
     fecha_inicio: "",
@@ -52,6 +52,9 @@ function Content() {
     motivo: "",
     archivo: "",
   })
+
+  if (!user) return null
+  const mias = justificaciones.filter((j) => j.solicitante_id === user.id)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,17 +86,43 @@ function Content() {
     setForm({ materia: "", fecha_inicio: "", fecha_fin: "", horas: 2, tipo: "enfermedad", motivo: "", archivo: "" })
   }
 
+  const columns: ExportColumn<Justificacion>[] = [
+    { header: "Materia", accessor: (r) => r.materia },
+    { header: "Fecha inicio", accessor: (r) => r.fecha_inicio },
+    { header: "Fecha fin", accessor: (r) => r.fecha_fin },
+    { header: "Horas", accessor: (r) => r.horas_justificadas },
+    { header: "Tipo", accessor: (r) => TIPOS_FALTA.find((t) => t.id === r.tipo)?.label ?? r.tipo },
+    { header: "Motivo", accessor: (r) => r.motivo },
+    { header: "Estado", accessor: (r) => r.estado },
+    { header: "Observaciones", accessor: (r) => r.observaciones ?? "" },
+    { header: "Solicitud", accessor: (r) => r.fecha_solicitud },
+    { header: "Revision", accessor: (r) => r.fecha_revision ?? "" },
+  ]
+
+  const tipoConvocatoria = user.rol === "docente" ? "justificacion_docente" : "justificacion_estudiante"
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={user.rol === "docente" ? "Justificar inasistencia" : "Mis justificaciones"}
         description="Solicitudes de justificacion de faltas"
         actions={
-          <Button onClick={() => setShowForm((v) => !v)}>
-            <Plus className="mr-2 h-4 w-4" /> {showForm ? "Cancelar" : "Nueva justificacion"}
-          </Button>
+          <div className="flex gap-2">
+            <ExportButtons
+              filename={`justificaciones_${user.cedula}`}
+              title="Mis justificaciones"
+              subtitle={`${user.nombres} ${user.apellidos}`}
+              columns={columns}
+              rows={mias}
+            />
+            <Button onClick={() => setShowForm((v) => !v)}>
+              <Plus className="mr-2 h-4 w-4" /> {showForm ? "Cancelar" : "Nueva justificacion"}
+            </Button>
+          </div>
         }
       />
+
+      <ConvocatoriaBanner tipos={[tipoConvocatoria]} />
 
       {showForm && (
         <Card>

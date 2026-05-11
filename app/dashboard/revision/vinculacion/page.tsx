@@ -7,10 +7,12 @@ import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge, FechaLimiteBadge } from "@/components/status-badge"
 import { ReviewActions } from "@/components/review-actions"
+import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import type { EstadoRevision } from "@/lib/types/database"
+import type { EstadoRevision, ReporteVinculacion } from "@/lib/types/database"
+import type { ExportColumn } from "@/lib/utils/export"
 
 export default function RevisionVinculacionPage() {
   return (
@@ -66,9 +68,37 @@ function Content() {
     rechazado: visibles.filter((v) => v.estado === "rechazado").length,
   }
 
+  const columns: ExportColumn<ReporteVinculacion>[] = [
+    {
+      header: "Docente",
+      accessor: (r) => {
+        const d = usuarios.find((u) => u.id === r.docente_id)
+        return d ? `${d.nombres} ${d.apellidos}` : ""
+      },
+    },
+    { header: "Titulo", accessor: (r) => r.titulo },
+    { header: "Tipo", accessor: (r) => (r.tipo === "final" ? "Final" : "Mensual") },
+    { header: "Mes", accessor: (r) => r.mes ?? "" },
+    { header: "Archivo", accessor: (r) => r.archivo },
+    { header: "Fecha subida", accessor: (r) => r.fecha_subida },
+    { header: "Estado", accessor: (r) => r.estado },
+    { header: "Observaciones", accessor: (r) => r.observaciones ?? "" },
+  ]
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Revision de vinculacion" description="Reportes mensuales y finales" />
+      <PageHeader
+        title="Revision de vinculacion"
+        description="Reportes mensuales y finales"
+        actions={
+          <ExportButtons
+            filename="revision_vinculacion"
+            title="Revision de vinculacion"
+            columns={columns}
+            rows={visibles}
+          />
+        }
+      />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as EstadoRevision)}>
         <TabsList>

@@ -101,11 +101,15 @@ function NavItemComponent({ item, isActive }: { item: NavItem; isActive: boolean
 }
 
 function AppSidebar() {
-  const { profile, role, permissions, signOut } = useAuth()
+  const { profile, role, permissions, signOut, loading } = useAuth()
   const pathname = usePathname()
   
-  const isSuperAdmin = role?.nombre === 'super_admin'
+  console.log('[v0] AppSidebar - permissions:', permissions, 'role:', role?.nombre, 'loading:', loading)
+  
+  const isSuperAdmin = role?.nombre === 'super_admin' || role?.nombre === 'administrador'
   const filteredNav = filterNavigation(navigationConfig, permissions, isSuperAdmin)
+  
+  console.log('[v0] Filtered nav sections:', filteredNav.length, 'items:', filteredNav.flatMap(s => s.items).length)
 
   const getInitials = (nombres: string, apellidos: string) => {
     return `${nombres.charAt(0)}${apellidos.charAt(0)}`.toUpperCase()

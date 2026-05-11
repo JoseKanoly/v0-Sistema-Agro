@@ -1,120 +1,112 @@
-'use client'
+"use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
-import { Profile, Role } from '@/lib/types/database'
-import type { RoleName } from '@/lib/navigation'
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
+import { useRouter } from "next/navigation"
+import type { Usuario, UserRole } from "@/lib/types/database"
+import { useData } from "@/lib/mock/store"
 
-interface AuthContextType {
-  user: User | null
-  profile: Profile | null
-  role: Role | null
-  roleName: RoleName | null
+const STORAGE_KEY = "sispaa.session.userId"
+
+interface AuthContextValue {
+  user: Usuario | null
   loading: boolean
-  signOut: () => Promise<void>
-  refreshProfile: () => Promise<void>
+  signIn: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>
+  signOut: () => void
+  registerEstudianteDocente: (
+    data: Pick<Usuario, "nombres" | "apellidos" | "email" | "password" | "cedula"> & { carrera_id: Usuario["carrera_id"] },
+  ) => Promise<{ ok: true } | { ok: false; error: string }>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+const STUDENT_DOMAIN = "@live.uleam.edu.ec"
+const STAFF_DOMAIN = "@uleam.edu.ec"
+
+function detectRoleFromEmail(email: string): UserRole | null {
+  const e = email.toLowerCase().trim()
+  if (e.endsWith(STUDENT_DOMAIN)) return "estudiante"
+  if (e.endsWith(STAFF_DOMAIN)) return "docente"
+  return null
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [role, setRole] = useState<Role | null>(null)
+  const { usuarios, setUsuarios } = useData()
+  const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  
-  const supabase = createClient()
+  const router = useRouter()
 
-  const fetchUserData = async (userId: string) => {
-    // Fetch profile with role
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select(`
-        *,
-        rol:roles(*)
-      `)
-      .eq('id', userId)
-      .single()
-
-    if (profileData) {
-      setProfile(profileData as Profile)
-      setRole(profileData.rol as Role)
-    }
-  }
-
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchUserData(user.id)
-    }
-  }
-
+  // Restaurar sesion al montar
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      
-      if (user) {
-        await fetchUserData(user.id)
-      }
-      
-      setLoading(false)
-    }
-
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        await fetchUserData(session.user.id)
-      } else {
-        setProfile(null)
-        setRole(null)
-      }
-      
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    if (typeof window === "undefined") return
+    const saved = window.localStorage.getItem(STORAGE_KEY)
+    if (saved) setUserId(saved)
+    setLoading(false)
   }, [])
 
-  const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    setRole(null)
-  }
+  const user = userId ? usuarios.find((u) => u.id === userId) ?? null : null
 
-  const roleName = role?.nombre as RoleName | null
+  const signIn = useCallback<AuthContextValue["signIn"]>(
+    async (email, password) => {
+      const found = usuarios.find(
+        (u) => u.email.toLowerCase() === email.toLowerCase().trim() && u.password === password,
+      )
+      if (!found) return { ok: false, error: "Credenciales invalidas." }
+      if (!found.activo) return { ok: false, error: "Tu cuenta esta desactivada." }
+      window.localStorage.setItem(STORAGE_KEY, found.id)
+      setUserId(found.id)
+      return { ok: true }
+    },
+    [usuarios],
+  )
+
+  const signOut = useCallback(() => {
+    window.localStorage.removeItem(STORAGE_KEY)
+    setUserId(null)
+    router.push("/auth/login")
+  }, [router])
+
+  const registerEstudianteDocente = useCallback<AuthContextValue["registerEstudianteDocente"]>(
+    async (data) => {
+      const rol = detectRoleFromEmail(data.email)
+      if (!rol) {
+        return {
+          ok: false,
+          error: `Usa un correo institucional: ${STAFF_DOMAIN} (docente) o ${STUDENT_DOMAIN} (estudiante).`,
+        }
+      }
+      const exists = usuarios.some((u) => u.email.toLowerCase() === data.email.toLowerCase())
+      if (exists) return { ok: false, error: "Ya existe una cuenta con ese correo." }
+
+      const nuevo: Usuario = {
+        id: `u-${rol}-${Date.now()}`,
+        cedula: data.cedula,
+        nombres: data.nombres,
+        apellidos: data.apellidos,
+        email: data.email,
+        password: data.password,
+        rol,
+        carrera_id: data.carrera_id,
+        activo: true,
+        tiene_vinculacion: false,
+        tiene_investigacion: false,
+      }
+      setUsuarios((prev) => [...prev, nuevo])
+      window.localStorage.setItem(STORAGE_KEY, nuevo.id)
+      setUserId(nuevo.id)
+      return { ok: true }
+    },
+    [usuarios, setUsuarios],
+  )
 
   return (
-    <AuthContext.Provider value={{ user, profile, role, roleName, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, registerEstudianteDocente }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
-
-// Hook para verificar si el usuario tiene un rol específico
-export function useHasRole(roles: RoleName | RoleName[]): boolean {
-  const { roleName } = useAuth()
-  
-  if (!roleName) return false
-  
-  const roleArray = Array.isArray(roles) ? roles : [roles]
-  return roleArray.includes(roleName)
-}
-
-// Hook para verificar si es administrador
-export function useIsAdmin(): boolean {
-  const { roleName } = useAuth()
-  return roleName === 'administrador'
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth debe usarse dentro de AuthProvider")
+  return ctx
 }

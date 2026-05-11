@@ -1,26 +1,21 @@
-'use client';
+"use client"
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth/auth-context"
 
 export default function IndexPage() {
-  const router = useRouter();
-  const supabase = createClient();
+  const router = useRouter()
+  const { user, loading } = useAuth()
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        router.push('/dashboard');
-      } else {
-        router.push('/auth/login');
-      }
-    };
+    if (loading) return
+    router.replace(user ? "/dashboard" : "/auth/login")
+  }, [user, loading, router])
 
-    checkAuth();
-  }, [router, supabase]);
-
-  return null;
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <p className="text-sm text-muted-foreground">Cargando SISPAA...</p>
+    </div>
+  )
 }

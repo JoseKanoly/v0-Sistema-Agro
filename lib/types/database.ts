@@ -1,298 +1,189 @@
-// Database types for SISPAA
-export type UserRole = 
-  | 'super_admin' 
-  | 'coordinador_carrera' 
-  | 'coordinador_investigacion' 
-  | 'docente' 
-  | 'secretaria' 
-  | 'estudiante'
+// SISPAA - tipos base del sistema
 
-export type DocumentStatus = 'pendiente' | 'aprobado' | 'rechazado'
-export type InvestigacionStatus = 'en_progreso' | 'completado' | 'pausado'
-export type VinculacionStatus = 'pendiente' | 'en_ejecucion' | 'ejecutada'
-export type TitulacionStatus = 'en_desarrollo' | 'en_revision' | 'aprobado' | 'graduado'
+export type UserRole =
+  | "super_admin"
+  | "coordinador_carrera"
+  | "coordinador_investigacion"
+  | "docente"
+  | "secretaria"
+  | "estudiante"
 
-export interface PeriodoAcademico {
-  id: string
-  codigo: string
-  nombre: string
-  fecha_inicio: string
-  fecha_fin: string
-  activo: boolean
-  created_at: string
-}
+export type CarreraId = "agropecuaria" | "agronegocios" | "agroindustria"
+
+// Semaforo unificado: pendiente (amarillo), aprobado (verde), rechazado (rojo)
+export type EstadoRevision = "pendiente" | "aprobado" | "rechazado"
+
+// Tipos de documentos del estudiante (5 apartados)
+export type TipoDocumentoEstudiante =
+  | "cedula"
+  | "matricula"
+  | "certificado_votacion"
+  | "foto_carnet"
+  | "certificado_medico"
+
+export const TIPOS_DOCUMENTO_ESTUDIANTE: { id: TipoDocumentoEstudiante; label: string }[] = [
+  { id: "cedula", label: "Copia de cedula" },
+  { id: "matricula", label: "Comprobante de matricula" },
+  { id: "certificado_votacion", label: "Certificado de votacion" },
+  { id: "foto_carnet", label: "Foto tamano carnet" },
+  { id: "certificado_medico", label: "Certificado medico" },
+]
+
+export type TipoFalta = "calamidad_domestica" | "enfermedad" | "viaje_academico" | "trabajo" | "otro"
+
+export const TIPOS_FALTA: { id: TipoFalta; label: string }[] = [
+  { id: "calamidad_domestica", label: "Calamidad domestica" },
+  { id: "enfermedad", label: "Enfermedad" },
+  { id: "viaje_academico", label: "Viaje academico" },
+  { id: "trabajo", label: "Trabajo" },
+  { id: "otro", label: "Otro" },
+]
 
 export interface Carrera {
-  id: string
+  id: CarreraId
   nombre: string
-  codigo: string
-  descripcion: string | null
-  activa: boolean
-  created_at: string
+  descripcion: string
 }
 
-export interface Materia {
+export interface Usuario {
   id: string
-  nombre: string
-  codigo: string
-  carrera_id: string
-  semestre: number | null
-  creditos: number
-  activa: boolean
-  carrera?: Carrera
-}
-
-export interface Role {
-  id: string
-  nombre: UserRole
-  descripcion: string | null
-}
-
-export interface Permiso {
-  id: string
-  nombre: string
-  modulo: string
-  descripcion: string | null
-}
-
-export interface Profile {
-  id: string
-  cedula: string | null
+  cedula: string
   nombres: string
   apellidos: string
   email: string
-  telefono: string | null
-  rol_id: string | null
-  carrera_id: string | null
-  avatar_url: string | null
+  password: string
+  rol: UserRole
+  carrera_id: CarreraId | null
+  // Asignaciones especiales del docente (las da secretaria/coordinador)
+  tiene_vinculacion?: boolean
+  tiene_investigacion?: boolean
   activo: boolean
-  created_at: string
-  rol?: Role
-  carrera?: Carrera
 }
 
 export interface DocumentoEstudiante {
   id: string
   estudiante_id: string
-  periodo_id: string
-  tipo: 'cedula' | 'matricula' | 'certificado' | 'foto' | 'otro'
+  tipo: TipoDocumentoEstudiante
   nombre_archivo: string
-  archivo_url: string
-  estado: DocumentStatus
+  fecha_subida: string
+  estado: EstadoRevision
   observaciones: string | null
   revisado_por: string | null
   fecha_revision: string | null
-  created_at: string
-  estudiante?: Profile
-  periodo?: PeriodoAcademico
 }
 
-export interface FaltaEstudiante {
+export interface Asistencia {
   id: string
   estudiante_id: string
-  periodo_id: string
-  materia_id: string
+  materia: string
+  fecha: string
+  horas_clase: number
+  asistio: boolean
+}
+
+export interface Justificacion {
+  id: string
+  // Quien la solicita (estudiante o docente)
+  solicitante_id: string
+  rol_solicitante: "estudiante" | "docente"
   fecha_inicio: string
   fecha_fin: string
+  materia: string
   horas_justificadas: number
   motivo: string
-  tipo_falta: 'calamidad_domestica' | 'enfermedad' | 'viaje' | 'otro'
-  archivo_justificacion_url: string | null
-  estado: DocumentStatus
+  tipo: TipoFalta
+  archivo_adjunto: string | null
+  estado: EstadoRevision
   observaciones: string | null
   revisado_por: string | null
-  created_at: string
-  estudiante?: Profile
-  materia?: Materia
+  fecha_solicitud: string
+  fecha_revision: string | null
 }
 
 export interface Silabo {
   id: string
   docente_id: string
-  materia_id: string
-  periodo_id: string
-  archivo_url: string
-  nombre_archivo: string
-  estado: DocumentStatus
-  fecha_limite: string | null
+  carrera_id: CarreraId
+  materia: string
+  archivo: string
+  fecha_subida: string
+  fecha_limite: string
+  estado: EstadoRevision
   observaciones: string | null
-  revisado_por: string | null
-  created_at: string
-  docente?: Profile
-  materia?: Materia
-  periodo?: PeriodoAcademico
 }
 
-export interface InformeDocente {
+export interface InformeAsignatura {
   id: string
   docente_id: string
-  materia_id: string
-  periodo_id: string
-  tipo: 'mensual' | 'parcial' | 'final'
-  archivo_url: string
-  nombre_archivo: string
-  estado: DocumentStatus
-  fecha_limite: string | null
+  carrera_id: CarreraId
+  materia: string
+  periodo: string
+  archivo: string
+  fecha_subida: string
+  fecha_limite: string
+  estado: EstadoRevision
   observaciones: string | null
-  created_at: string
-  docente?: Profile
-  materia?: Materia
 }
 
-export interface Investigacion {
+export interface ReporteVinculacion {
   id: string
+  docente_id: string
+  tipo: "mensual" | "final"
+  mes: string | null
   titulo: string
-  descripcion: string | null
+  archivo: string
+  fecha_subida: string
+  fecha_limite: string
+  estado: EstadoRevision
+  observaciones: string | null
+}
+
+export interface TemaTitulacion {
+  id: string
   docente_id: string
-  periodo_id: string
-  carrera_id: string
-  fecha_inicio: string | null
-  fecha_fin: string | null
-  estado: InvestigacionStatus
-  presupuesto_asignado: number
-  presupuesto_ejecutado: number
-  created_at: string
-  docente?: Profile
-  carrera?: Carrera
-  hitos?: HitoInvestigacion[]
+  estudiante_id: string
+  carrera_id: CarreraId
+  tema: string
+  descripcion: string
+  fecha_asignacion: string
+  estado: "en_desarrollo" | "aprobado" | "graduado"
+}
+
+export interface ProyectoInvestigacion {
+  id: string
+  docente_id: string
+  carrera_id: CarreraId
+  titulo: string
+  descripcion: string
+  total_hitos: number
+  fecha_inicio: string
 }
 
 export interface HitoInvestigacion {
   id: string
-  investigacion_id: string
+  proyecto_id: string
+  numero: number
   titulo: string
-  descripcion: string | null
-  fecha_limite: string | null
-  fecha_completado: string | null
-  archivo_url: string | null
-  estado: 'pendiente' | 'en_revision' | 'completado'
-  porcentaje_avance: number
-  observaciones: string | null
-}
-
-export interface VinculacionActividad {
-  id: string
-  titulo: string
-  descripcion: string | null
-  docente_id: string
-  periodo_id: string
-  carrera_id: string
-  fecha_inicio: string | null
-  fecha_fin: string | null
-  estado: VinculacionStatus
-  beneficiarios: number
-  created_at: string
-  docente?: Profile
-  empresas?: VinculacionEmpresa[]
-}
-
-export interface VinculacionEmpresa {
-  id: string
-  actividad_id: string
-  nombre_empresa: string
-  ruc: string | null
-  contacto: string | null
-  telefono: string | null
-  direccion: string | null
-}
-
-export interface TitulacionTema {
-  id: string
-  titulo: string
-  descripcion: string | null
-  tutor_id: string
-  periodo_id: string
-  carrera_id: string
-  estado: TitulacionStatus
-  fecha_aprobacion: string | null
-  created_at: string
-  tutor?: Profile
-  estudiantes?: TitulacionEstudiante[]
-}
-
-export interface TitulacionEstudiante {
-  id: string
-  tema_id: string
-  estudiante_id: string
-  estado: 'en_proceso' | 'graduado'
-  fecha_graduacion: string | null
-  estudiante?: Profile
-}
-
-export interface PracticaLaboratorio {
-  id: string
-  titulo: string
-  descripcion: string | null
-  docente_id: string
-  materia_id: string
-  carrera_id: string
-  periodo_id: string
-  fecha: string
-  ubicacion: string | null
-  duracion_horas: number
-  estudiantes_asistentes: number
-  archivo_evidencia_url: string | null
-  created_at: string
-  docente?: Profile
-  carrera?: Carrera
-}
-
-export interface Notificacion {
-  id: string
-  usuario_id: string
-  titulo: string
-  mensaje: string
-  tipo: 'documento_aprobado' | 'documento_rechazado' | 'fecha_limite' | 'recordatorio' | 'sistema'
-  leida: boolean
-  enlace: string | null
-  created_at: string
+  descripcion: string
+  archivo: string | null
+  fecha_subida: string | null
+  completado: boolean
 }
 
 export interface FechaLimite {
   id: string
-  periodo_id: string
-  carrera_id: string
-  tipo: 'silabo' | 'informe_mensual' | 'informe_final' | 'documento_estudiante'
-  descripcion: string | null
+  tipo: "silabo" | "informe" | "vinculacion_mensual" | "vinculacion_final" | "documento_estudiante"
+  descripcion: string
   fecha_limite: string
-  periodo?: PeriodoAcademico
-  carrera?: Carrera
+  carrera_id: CarreraId | null
 }
 
-// KPI Types
-export interface DashboardKPIs {
-  docencia: {
-    porcentaje: number
-    cumplidos: number
-    pendientes: number
-    incumplidos: number
-  }
-  investigacion: {
-    porcentaje: number
-    proyectosActivos: number
-    hitosAvanzados: number
-    enRevision: number
-  }
-  estudiantes: {
-    matriculados: number
-    activos: number
-    retirados: number
-    faltasRegistradas: number
-  }
-  practicasLaboratorio: {
-    total: number
-    porCarrera: { carrera: string; cantidad: number }[]
-  }
-  vinculacion: {
-    actividades: number
-    ejecutadas: number
-    pendientes: number
-    empresasBeneficiadas: number
-  }
-  titulacion: {
-    enProgreso: number
-    temasDesarrollo: number
-    graduados: number
-    pendientesRevision: number
-  }
+export interface Notificacion {
+  id: string
+  destinatario_id: string
+  titulo: string
+  mensaje: string
+  tipo: "info" | "exito" | "advertencia" | "error"
+  leida: boolean
+  fecha: string
 }

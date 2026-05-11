@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
-import { KpiCard } from '@/components/dashboard/kpi-card';
+import { KPICard } from '@/components/dashboard/kpi-card';
 import { DashboardFilters } from '@/components/dashboard/filters';
 import type { PeriodoAcademico, Carrera } from '@/lib/types/database';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -169,7 +169,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {kpiData && (
             <>
-              <KpiCard
+              <KPICard
                 title="Docencia"
                 value={`${kpiData.docencia.cumplimiento}%`}
                 subtitle="Cumplimiento"
@@ -180,7 +180,7 @@ export default function DashboardPage() {
                   { label: 'Incumplidos', value: kpiData.docencia.incumplidos },
                 ]}
               />
-              <KpiCard
+              <KPICard
                 title="Investigación"
                 value={kpiData.investigacion.activos.toString()}
                 subtitle="Proyectos Activos"
@@ -191,7 +191,7 @@ export default function DashboardPage() {
                   { label: 'En Revisión', value: kpiData.investigacion.revision },
                 ]}
               />
-              <KpiCard
+              <KPICard
                 title="Estudiantes"
                 value={kpiData.estudiantes.matriculados.toString()}
                 subtitle="Matriculados"
@@ -201,13 +201,13 @@ export default function DashboardPage() {
                   { label: 'Retirados', value: kpiData.estudiantes.retirados },
                 ]}
               />
-              <KpiCard
+              <KPICard
                 title="Prácticas Lab"
                 value={kpiData.practicas.realizadas.toString()}
                 subtitle="Realizadas"
                 icon="🧪"
               />
-              <KpiCard
+              <KPICard
                 title="Vinculación"
                 value={kpiData.vinculacion.actividades.toString()}
                 subtitle="Actividades"
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                   { label: 'Pendientes', value: kpiData.vinculacion.pendientes },
                 ]}
               />
-              <KpiCard
+              <KPICard
                 title="Titulación"
                 value={kpiData.titulacion.temas.toString()}
                 subtitle="Temas en Proceso"

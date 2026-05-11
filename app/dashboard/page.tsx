@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { DashboardLayout } from '@/components/dashboard/dashboard-layout';
 import { KpiCard } from '@/components/dashboard/kpi-card';
-import { Filters } from '@/components/dashboard/filters';
+import { DashboardFilters } from '@/components/dashboard/filters';
+import type { PeriodoAcademico, Carrera } from '@/lib/types/database';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -18,28 +19,39 @@ interface KPIData {
 }
 
 export default function DashboardPage() {
-  const [selectedPeriodo, setSelectedPeriodo] = useState('2026-1');
+  const [selectedPeriodo, setSelectedPeriodo] = useState('');
   const [selectedCarrera, setSelectedCarrera] = useState('all');
+  const [periodos, setPeriodos] = useState<PeriodoAcademico[]>([]);
+  const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
+  // Fetch periodos and carreras on mount
   useEffect(() => {
+    const fetchFilters = async () => {
+      const [periodosRes, carrerasRes] = await Promise.all([
+        supabase.from('periodos_academicos').select('*').order('fecha_inicio', { ascending: false }),
+        supabase.from('carreras').select('*').eq('activa', true)
+      ]);
+      
+      if (periodosRes.data) {
+        setPeriodos(periodosRes.data);
+        // Set default to active period or first period
+        const activePeriodo = periodosRes.data.find(p => p.activo) || periodosRes.data[0];
+        if (activePeriodo) setSelectedPeriodo(activePeriodo.id);
+      }
+      if (carrerasRes.data) setCarreras(carrerasRes.data);
+    };
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPeriodo) return;
+    
     const fetchKPIs = async () => {
       try {
-        // Fetch period data
-        const { data: periodos } = await supabase
-          .from('periodos_academicos')
-          .select('*')
-          .eq('codigo', selectedPeriodo);
-
-        if (!periodos || periodos.length === 0) {
-          console.log('[v0] No period found');
-          setLoading(false);
-          return;
-        }
-
-        const periodoId = periodos[0].id;
+        const periodoId = selectedPeriodo;
 
         // Fetch docencia KPIs
         const { data: silabos } = await supabase
@@ -144,7 +156,9 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-6 p-6">
         {/* Filters */}
-        <Filters
+        <DashboardFilters
+          periodos={periodos}
+          carreras={carreras}
           selectedPeriodo={selectedPeriodo}
           selectedCarrera={selectedCarrera}
           onPeriodoChange={setSelectedPeriodo}

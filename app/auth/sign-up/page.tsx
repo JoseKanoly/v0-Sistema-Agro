@@ -15,21 +15,36 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-const ALLOWED_EMAIL_DOMAIN = '@uleam.edu.ec'
+// Dominios institucionales permitidos
+const ALLOWED_DOMAINS = {
+  STAFF: '@uleam.edu.ec',      // Docentes y personal administrativo
+  STUDENT: '@live.uleam.edu.ec' // Estudiantes
+}
 
-function validateEmail(email: string): { valid: boolean; message?: string } {
+type UserType = 'docente' | 'estudiante' | null
+
+function validateEmail(email: string): { valid: boolean; message?: string; userType: UserType } {
   if (!email) {
-    return { valid: false, message: 'El correo es requerido' }
+    return { valid: false, message: 'El correo es requerido', userType: null }
   }
   
-  if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
-    return { 
-      valid: false, 
-      message: `Solo se permiten correos institucionales (${ALLOWED_EMAIL_DOMAIN})` 
-    }
+  const emailLower = email.toLowerCase()
+  
+  // Verificar dominio de estudiantes primero (es más específico)
+  if (emailLower.endsWith(ALLOWED_DOMAINS.STUDENT)) {
+    return { valid: true, userType: 'estudiante' }
   }
   
-  return { valid: true }
+  // Verificar dominio de docentes/administrativos
+  if (emailLower.endsWith(ALLOWED_DOMAINS.STAFF)) {
+    return { valid: true, userType: 'docente' }
+  }
+  
+  return { 
+    valid: false, 
+    message: `Solo se permiten correos institucionales (${ALLOWED_DOMAINS.STAFF} o ${ALLOWED_DOMAINS.STUDENT})`,
+    userType: null
+  }
 }
 
 export default function SignUpPage() {
@@ -79,6 +94,9 @@ export default function SignUpPage() {
     try {
       const supabase = createClient()
       
+      // Determinar el tipo de usuario según el dominio del correo
+      const { userType } = validateEmail(email)
+      
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -89,6 +107,7 @@ export default function SignUpPage() {
           data: {
             nombres: nombres.trim(),
             apellidos: apellidos.trim(),
+            user_type: userType, // 'docente' o 'estudiante'
           },
         },
       })
@@ -151,7 +170,7 @@ export default function SignUpPage() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Solo se permiten correos con dominio {ALLOWED_EMAIL_DOMAIN}
+                  Docentes/Administrativos: {ALLOWED_DOMAINS.STAFF} | Estudiantes: {ALLOWED_DOMAINS.STUDENT}
                 </p>
               </div>
               

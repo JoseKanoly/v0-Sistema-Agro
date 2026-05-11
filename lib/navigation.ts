@@ -166,19 +166,19 @@ export const navigationConfig: NavSection[] = [
         title: 'Carreras',
         url: '/dashboard/admin/carreras',
         icon: School,
-        permission: 'carreras.manage'
+        permission: 'careers.manage'
       },
       {
         title: 'Periodos',
         url: '/dashboard/admin/periodos',
         icon: Calendar,
-        permission: 'periodos.manage'
+        permission: 'periods.manage'
       },
       {
         title: 'Configuracion',
         url: '/dashboard/admin/configuracion',
         icon: Settings,
-        permission: 'users.manage'
+        permission: 'settings.manage'
       }
     ]
   }

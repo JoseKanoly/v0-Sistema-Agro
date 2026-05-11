@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,6 +80,15 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Ingresando...' : 'Ingresar'}
             </Button>
+            <div className="text-center text-sm text-muted-foreground">
+              ¿No tienes una cuenta?{' '}
+              <Link
+                href="/auth/sign-up"
+                className="text-primary underline underline-offset-4 hover:text-primary/80"
+              >
+                Regístrate
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>

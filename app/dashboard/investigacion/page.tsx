@@ -1,14 +1,22 @@
 "use client"
 
+import { useRef, useState } from "react"
 import { useAuth } from "@/lib/auth/auth-context"
 import { useData } from "@/lib/mock/store"
 import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
+import { ConvocatoriaBanner } from "@/components/convocatoria-banner"
+import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Microscope, FileText } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Microscope, FileText, Upload } from "lucide-react"
 import { CARRERAS } from "@/lib/mock/carreras"
 import { Progress } from "@/components/ui/progress"
+import type { ExportColumn } from "@/lib/utils/export"
+import type { ProyectoInvestigacion } from "@/lib/types/database"
+
+const HOY = new Date().toISOString().slice(0, 10)
 
 export default function InvestigacionPage() {
   return (
@@ -20,11 +28,12 @@ export default function InvestigacionPage() {
 
 function Content() {
   const { user } = useAuth()
-  const { proyectos, hitos, usuarios } = useData()
+  const { proyectos, hitos, setHitos, usuarios, agregarNotificacion } = useData()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const targetHito = useRef<string | null>(null)
 
   if (!user) return null
 
-  // Docente sin proyecto
   if (user.rol === "docente" && !user.tiene_investigacion) {
     return (
       <div className="space-y-6">
@@ -41,12 +50,77 @@ function Content() {
 
   const visibles = user.rol === "docente" ? proyectos.filter((p) => p.docente_id === user.id) : proyectos
 
+  const onPick = (hitoId: string) => {
+    targetHito.current = hitoId
+    inputRef.current?.click()
+  }
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const id = targetHito.current
+    if (!file || !id) return
+    setHitos((prev) =>
+      prev.map((h) =>
+        h.id === id ? { ...h, archivo: file.name, fecha_subida: HOY, completado: true } : h,
+      ),
+    )
+    agregarNotificacion({
+      destinatario_id: user.id,
+      titulo: "Hito de investigacion completado",
+      mensaje: "Tu avance fue registrado correctamente.",
+      tipo: "exito",
+    })
+    if (inputRef.current) inputRef.current.value = ""
+  }
+
+  const projectColumns: ExportColumn<ProyectoInvestigacion>[] = [
+    { header: "Titulo", accessor: (r) => r.titulo },
+    {
+      header: "Investigador",
+      accessor: (r) => {
+        const d = usuarios.find((u) => u.id === r.docente_id)
+        return d ? `${d.nombres} ${d.apellidos}` : ""
+      },
+    },
+    {
+      header: "Carrera",
+      accessor: (r) => CARRERAS.find((c) => c.id === r.carrera_id)?.nombre ?? "",
+    },
+    { header: "Total hitos", accessor: (r) => r.total_hitos },
+    {
+      header: "Completados",
+      accessor: (r) => hitos.filter((h) => h.proyecto_id === r.id && h.completado).length,
+    },
+    {
+      header: "Avance %",
+      accessor: (r) => {
+        const total = r.total_hitos
+        const ok = hitos.filter((h) => h.proyecto_id === r.id && h.completado).length
+        return Math.round((ok / total) * 100)
+      },
+    },
+    { header: "Fecha inicio", accessor: (r) => r.fecha_inicio },
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={user.rol === "docente" ? "Mis proyectos de investigacion" : "Proyectos de investigacion"}
         description="Avance de hitos por proyecto"
+        actions={
+          <ExportButtons
+            filename="proyectos_investigacion"
+            title="Proyectos de investigacion"
+            subtitle="Resumen de avance por proyecto"
+            columns={projectColumns}
+            rows={visibles}
+          />
+        }
       />
+
+      {user.rol === "docente" && <ConvocatoriaBanner tipos={["investigacion_hito"]} />}
+
+      <input ref={inputRef} type="file" accept=".pdf" onChange={onFile} className="hidden" />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {visibles.map((p) => {
@@ -83,14 +157,28 @@ function Content() {
                 </div>
                 <div className="space-y-1.5">
                   {hitosP.map((h) => (
-                    <div key={h.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                    <div
+                      key={h.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2 text-sm"
+                    >
                       <span className="flex items-center gap-2">
                         <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                        {h.titulo}
+                        <span>{h.titulo}</span>
+                        {h.archivo && (
+                          <span className="text-xs text-muted-foreground">- {h.archivo}</span>
+                        )}
                       </span>
-                      <Badge variant={h.completado ? "default" : "outline"}>
-                        {h.completado ? "Entregado" : "Pendiente"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={h.completado ? "default" : "outline"}>
+                          {h.completado ? "Entregado" : "Pendiente"}
+                        </Badge>
+                        {user.rol === "docente" && p.docente_id === user.id && (
+                          <Button size="sm" variant="outline" onClick={() => onPick(h.id)}>
+                            <Upload className="mr-1 h-3.5 w-3.5" />
+                            {h.completado ? "Reemplazar" : "Subir"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

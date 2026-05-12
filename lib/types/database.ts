@@ -170,43 +170,13 @@ export interface HitoInvestigacion {
   completado: boolean
 }
 
-export type TipoConvocatoria =
-  | "silabo"
-  | "informe"
-  | "vinculacion_mensual"
-  | "vinculacion_final"
-  | "documento_estudiante"
-  | "justificacion_estudiante"
-  | "justificacion_docente"
-  | "investigacion_hito"
-
-export type AudienciaConvocatoria = "docentes" | "estudiantes" | "ambos"
-
-// Conserva el nombre FechaLimite por compatibilidad pero ahora representa una Convocatoria
-// (evento creado por secretaria/super_admin para que la audiencia objetivo suba documentos).
 export interface FechaLimite {
   id: string
-  tipo: TipoConvocatoria
-  titulo: string
+  tipo: "silabo" | "informe" | "vinculacion_mensual" | "vinculacion_final" | "documento_estudiante"
   descripcion: string
-  fecha_apertura: string
   fecha_limite: string
-  audiencia: AudienciaConvocatoria
   carrera_id: CarreraId | null
-  creada_por: string
-  activa: boolean
 }
-
-export const TIPOS_CONVOCATORIA: { id: TipoConvocatoria; label: string; audiencia: AudienciaConvocatoria }[] = [
-  { id: "silabo", label: "Entrega de silabos", audiencia: "docentes" },
-  { id: "informe", label: "Informes de asignatura", audiencia: "docentes" },
-  { id: "vinculacion_mensual", label: "Reporte mensual de vinculacion", audiencia: "docentes" },
-  { id: "vinculacion_final", label: "Reporte final de vinculacion", audiencia: "docentes" },
-  { id: "investigacion_hito", label: "Avance de hito de investigacion", audiencia: "docentes" },
-  { id: "justificacion_docente", label: "Justificacion de inasistencia (docentes)", audiencia: "docentes" },
-  { id: "documento_estudiante", label: "Documentos de estudiantes", audiencia: "estudiantes" },
-  { id: "justificacion_estudiante", label: "Justificacion de inasistencia (estudiantes)", audiencia: "estudiantes" },
-]
 
 export interface Notificacion {
   id: string

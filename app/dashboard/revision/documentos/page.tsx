@@ -7,16 +7,10 @@ import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { ReviewActions } from "@/components/review-actions"
-import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import {
-  TIPOS_DOCUMENTO_ESTUDIANTE,
-  type EstadoRevision,
-  type DocumentoEstudiante,
-} from "@/lib/types/database"
-import type { ExportColumn } from "@/lib/utils/export"
+import { TIPOS_DOCUMENTO_ESTUDIANTE, type EstadoRevision } from "@/lib/types/database"
 
 export default function RevisionDocumentosPage() {
   return (
@@ -89,38 +83,11 @@ function Content() {
     rechazado: documentos.filter((d) => d.estado === "rechazado").length,
   }
 
-  const columns: ExportColumn<DocumentoEstudiante>[] = [
-    {
-      header: "Estudiante",
-      accessor: (r) => {
-        const u = usuarios.find((x) => x.id === r.estudiante_id)
-        return u ? `${u.nombres} ${u.apellidos}` : ""
-      },
-    },
-    { header: "Cedula", accessor: (r) => usuarios.find((x) => x.id === r.estudiante_id)?.cedula ?? "" },
-    {
-      header: "Documento",
-      accessor: (r) => TIPOS_DOCUMENTO_ESTUDIANTE.find((t) => t.id === r.tipo)?.label ?? r.tipo,
-    },
-    { header: "Archivo", accessor: (r) => r.nombre_archivo },
-    { header: "Fecha subida", accessor: (r) => r.fecha_subida },
-    { header: "Estado", accessor: (r) => r.estado },
-    { header: "Observaciones", accessor: (r) => r.observaciones ?? "" },
-  ]
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Revision de documentos de estudiantes"
         description="Aprueba o rechaza los documentos subidos"
-        actions={
-          <ExportButtons
-            filename="revision_documentos"
-            title="Revision de documentos de estudiantes"
-            columns={columns}
-            rows={documentos}
-          />
-        }
       />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as EstadoRevision)}>

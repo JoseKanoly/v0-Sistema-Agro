@@ -7,16 +7,10 @@ import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { ReviewActions } from "@/components/review-actions"
-import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import {
-  TIPOS_FALTA,
-  type EstadoRevision,
-  type Justificacion,
-} from "@/lib/types/database"
-import type { ExportColumn } from "@/lib/utils/export"
+import { TIPOS_FALTA, type EstadoRevision } from "@/lib/types/database"
 
 export default function RevisionJustificacionesPage() {
   return (
@@ -76,39 +70,9 @@ function Content() {
     rechazado: justificaciones.filter((j) => j.estado === "rechazado").length,
   }
 
-  const columns: ExportColumn<Justificacion>[] = [
-    {
-      header: "Solicitante",
-      accessor: (r) => {
-        const u = usuarios.find((x) => x.id === r.solicitante_id)
-        return u ? `${u.nombres} ${u.apellidos}` : ""
-      },
-    },
-    { header: "Rol", accessor: (r) => r.rol_solicitante },
-    { header: "Materia", accessor: (r) => r.materia },
-    { header: "Inicio", accessor: (r) => r.fecha_inicio },
-    { header: "Fin", accessor: (r) => r.fecha_fin },
-    { header: "Horas", accessor: (r) => r.horas_justificadas },
-    { header: "Tipo", accessor: (r) => TIPOS_FALTA.find((t) => t.id === r.tipo)?.label ?? r.tipo },
-    { header: "Motivo", accessor: (r) => r.motivo },
-    { header: "Estado", accessor: (r) => r.estado },
-    { header: "Observaciones", accessor: (r) => r.observaciones ?? "" },
-  ]
-
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Revision de justificaciones"
-        description="Estudiantes y docentes"
-        actions={
-          <ExportButtons
-            filename="revision_justificaciones"
-            title="Revision de justificaciones"
-            columns={columns}
-            rows={justificaciones}
-          />
-        }
-      />
+      <PageHeader title="Revision de justificaciones" description="Estudiantes y docentes" />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as EstadoRevision)}>
         <TabsList>

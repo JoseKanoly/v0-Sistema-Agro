@@ -395,70 +395,42 @@ export const HITOS_INV_SEED: HitoInvestigacion[] = PROYECTOS_INV_SEED.flatMap((p
   })),
 )
 
-// === CONVOCATORIAS / FECHAS LIMITE (creadas por secretaria) ===
+// === FECHAS LIMITE ===
 export const FECHAS_LIMITE_SEED: FechaLimite[] = [
   {
     id: "fl-1",
     tipo: "silabo",
-    titulo: "Entrega de silabos 2026-1",
-    descripcion:
-      "Subir el silabo de cada asignatura en formato PDF, siguiendo la plantilla institucional vigente.",
-    fecha_apertura: "2026-04-15",
+    descripcion: "Entrega de silabos del periodo 2026-1",
     fecha_limite: "2026-05-20",
-    audiencia: "docentes",
     carrera_id: null,
-    creada_por: "u-secre-1",
-    activa: true,
   },
   {
     id: "fl-2",
     tipo: "informe",
-    titulo: "Informes finales de asignatura",
-    descripcion:
-      "Informe final por asignatura del periodo 2026-1 incluyendo notas, asistencia y observaciones.",
-    fecha_apertura: "2026-05-01",
+    descripcion: "Informes finales de asignatura",
     fecha_limite: "2026-05-30",
-    audiencia: "docentes",
     carrera_id: null,
-    creada_por: "u-secre-1",
-    activa: true,
   },
   {
     id: "fl-3",
     tipo: "vinculacion_mensual",
-    titulo: "Reporte mensual de vinculacion - Mayo",
-    descripcion: "Solo docentes con asignacion de vinculacion. Adjuntar evidencias de actividades del mes.",
-    fecha_apertura: "2026-05-01",
+    descripcion: "Reporte mensual de vinculacion - Mayo",
     fecha_limite: "2026-06-05",
-    audiencia: "docentes",
     carrera_id: null,
-    creada_por: "u-secre-2",
-    activa: true,
   },
   {
     id: "fl-4",
     tipo: "vinculacion_final",
-    titulo: "Reporte final del proyecto de vinculacion",
-    descripcion: "Cierre del proyecto: resultados, beneficiarios y registro fotografico.",
-    fecha_apertura: "2026-06-15",
+    descripcion: "Reporte final del proyecto de vinculacion",
     fecha_limite: "2026-07-15",
-    audiencia: "docentes",
     carrera_id: null,
-    creada_por: "u-secre-1",
-    activa: true,
   },
   {
     id: "fl-5",
     tipo: "documento_estudiante",
-    titulo: "Documentos de matricula 2026-1",
-    descripcion:
-      "Subir los 5 documentos requeridos: cedula, matricula, certificado de votacion, foto y certificado medico.",
-    fecha_apertura: "2026-04-10",
+    descripcion: "Documentos de matricula estudiantes",
     fecha_limite: "2026-05-25",
-    audiencia: "estudiantes",
     carrera_id: null,
-    creada_por: "u-secre-1",
-    activa: true,
   },
 ]
 

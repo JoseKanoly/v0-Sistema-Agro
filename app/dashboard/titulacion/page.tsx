@@ -4,13 +4,10 @@ import { useAuth } from "@/lib/auth/auth-context"
 import { useData } from "@/lib/mock/store"
 import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
-import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { CARRERAS } from "@/lib/mock/carreras"
-import type { ExportColumn } from "@/lib/utils/export"
-import type { TemaTitulacion } from "@/lib/types/database"
 
 export default function TitulacionPage() {
   return (
@@ -33,27 +30,6 @@ function Content() {
     visibles = titulacion.filter((t) => t.carrera_id === user.carrera_id)
   }
 
-  const columns: ExportColumn<TemaTitulacion>[] = [
-    { header: "Tema", accessor: (r) => r.tema },
-    {
-      header: "Estudiante",
-      accessor: (r) => {
-        const e = usuarios.find((u) => u.id === r.estudiante_id)
-        return e ? `${e.nombres} ${e.apellidos}` : ""
-      },
-    },
-    {
-      header: "Tutor",
-      accessor: (r) => {
-        const t = usuarios.find((u) => u.id === r.docente_id)
-        return t ? `${t.nombres} ${t.apellidos}` : ""
-      },
-    },
-    { header: "Carrera", accessor: (r) => CARRERAS.find((c) => c.id === r.carrera_id)?.nombre ?? "" },
-    { header: "Fecha asignacion", accessor: (r) => r.fecha_asignacion },
-    { header: "Estado", accessor: (r) => r.estado.replace("_", " ") },
-  ]
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -62,14 +38,6 @@ function Content() {
           user.rol === "docente"
             ? "Estudiantes que tutorias"
             : "Temas asignados en la facultad"
-        }
-        actions={
-          <ExportButtons
-            filename="titulacion"
-            title="Temas de titulacion"
-            columns={columns}
-            rows={visibles}
-          />
         }
       />
 

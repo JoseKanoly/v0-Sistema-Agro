@@ -7,13 +7,11 @@ import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge, FechaLimiteBadge } from "@/components/status-badge"
 import { ReviewActions } from "@/components/review-actions"
-import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import type { EstadoRevision, InformeAsignatura } from "@/lib/types/database"
+import type { EstadoRevision } from "@/lib/types/database"
 import { CARRERAS } from "@/lib/mock/carreras"
-import type { ExportColumn } from "@/lib/utils/export"
 
 export default function RevisionInformesPage() {
   return (
@@ -66,37 +64,9 @@ function Content() {
     rechazado: visibles.filter((i) => i.estado === "rechazado").length,
   }
 
-  const columns: ExportColumn<InformeAsignatura>[] = [
-    {
-      header: "Docente",
-      accessor: (r) => {
-        const d = usuarios.find((u) => u.id === r.docente_id)
-        return d ? `${d.nombres} ${d.apellidos}` : ""
-      },
-    },
-    { header: "Materia", accessor: (r) => r.materia },
-    { header: "Carrera", accessor: (r) => CARRERAS.find((c) => c.id === r.carrera_id)?.nombre ?? "" },
-    { header: "Periodo", accessor: (r) => r.periodo },
-    { header: "Archivo", accessor: (r) => r.archivo },
-    { header: "Fecha limite", accessor: (r) => r.fecha_limite },
-    { header: "Estado", accessor: (r) => r.estado },
-    { header: "Observaciones", accessor: (r) => r.observaciones ?? "" },
-  ]
-
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Revision de informes"
-        description="Informes de asignatura enviados"
-        actions={
-          <ExportButtons
-            filename="revision_informes"
-            title="Revision de informes"
-            columns={columns}
-            rows={visibles}
-          />
-        }
-      />
+      <PageHeader title="Revision de informes" description="Informes de asignatura enviados" />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as EstadoRevision)}>
         <TabsList>

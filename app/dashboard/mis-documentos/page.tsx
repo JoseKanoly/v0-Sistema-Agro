@@ -6,17 +6,10 @@ import { useData } from "@/lib/mock/store"
 import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
-import { ConvocatoriaBanner } from "@/components/convocatoria-banner"
-import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Upload, FileText } from "lucide-react"
-import {
-  TIPOS_DOCUMENTO_ESTUDIANTE,
-  type TipoDocumentoEstudiante,
-  type DocumentoEstudiante,
-} from "@/lib/types/database"
-import type { ExportColumn } from "@/lib/utils/export"
+import { TIPOS_DOCUMENTO_ESTUDIANTE, type TipoDocumentoEstudiante } from "@/lib/types/database"
 
 export default function MisDocumentosPage() {
   return (
@@ -75,35 +68,12 @@ function DocumentosContent() {
     if (inputRef.current) inputRef.current.value = ""
   }
 
-  const columns: ExportColumn<DocumentoEstudiante>[] = [
-    {
-      header: "Documento",
-      accessor: (r) => TIPOS_DOCUMENTO_ESTUDIANTE.find((t) => t.id === r.tipo)?.label ?? r.tipo,
-    },
-    { header: "Archivo", accessor: (r) => r.nombre_archivo },
-    { header: "Fecha subida", accessor: (r) => r.fecha_subida },
-    { header: "Estado", accessor: (r) => r.estado },
-    { header: "Observaciones", accessor: (r) => r.observaciones ?? "" },
-    { header: "Fecha revision", accessor: (r) => r.fecha_revision ?? "" },
-  ]
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Mis documentos"
         description="Sube y administra los documentos requeridos por secretaria"
-        actions={
-          <ExportButtons
-            filename={`mis_documentos_${user.cedula}`}
-            title="Mis documentos"
-            subtitle={`${user.nombres} ${user.apellidos} - Cedula ${user.cedula}`}
-            columns={columns}
-            rows={mios}
-          />
-        }
       />
-
-      <ConvocatoriaBanner tipos={["documento_estudiante"]} />
 
       <input
         ref={inputRef}

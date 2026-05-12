@@ -4,15 +4,12 @@ import { useAuth } from "@/lib/auth/auth-context"
 import { useData } from "@/lib/mock/store"
 import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
-import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ClipboardCheck } from "lucide-react"
-import type { ExportColumn } from "@/lib/utils/export"
-import type { Asistencia } from "@/lib/types/database"
 
 export default function MisAsistenciasPage() {
   return (
@@ -30,23 +27,9 @@ function Content() {
   const faltas = asistencias.filter((a) => a.estudiante_id === user.id && !a.asistio)
   const misJust = justificaciones.filter((j) => j.solicitante_id === user.id)
 
+  // Asocia justificacion por materia + fecha
   const findJust = (materia: string, fecha: string) =>
     misJust.find((j) => j.materia === materia && j.fecha_inicio <= fecha && j.fecha_fin >= fecha)
-
-  const estadoTxt = (f: Asistencia) => {
-    const j = findJust(f.materia, f.fecha)
-    if (!j) return "Sin justificar"
-    if (j.estado === "aprobado") return "Justificada"
-    if (j.estado === "pendiente") return "En revision"
-    return "Rechazada"
-  }
-
-  const columns: ExportColumn<Asistencia>[] = [
-    { header: "Fecha", accessor: (r) => r.fecha },
-    { header: "Materia", accessor: (r) => r.materia },
-    { header: "Horas", accessor: (r) => r.horas_clase },
-    { header: "Estado", accessor: (r) => estadoTxt(r) },
-  ]
 
   return (
     <div className="space-y-6">
@@ -54,18 +37,9 @@ function Content() {
         title="Mis asistencias"
         description="Registro de tus faltas y horas justificadas"
         actions={
-          <div className="flex gap-2">
-            <ExportButtons
-              filename={`asistencias_${user.cedula}`}
-              title="Registro de asistencias"
-              subtitle={`${user.nombres} ${user.apellidos}`}
-              columns={columns}
-              rows={faltas}
-            />
-            <Button asChild>
-              <Link href="/dashboard/mis-justificaciones">Justificar una falta</Link>
-            </Button>
-          </div>
+          <Button asChild>
+            <Link href="/dashboard/mis-justificaciones">Justificar una falta</Link>
+          </Button>
         }
       />
 

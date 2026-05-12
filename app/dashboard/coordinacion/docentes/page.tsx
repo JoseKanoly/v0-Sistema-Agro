@@ -4,13 +4,10 @@ import { useAuth } from "@/lib/auth/auth-context"
 import { useData } from "@/lib/mock/store"
 import { AccessGuard } from "@/components/access-guard"
 import { PageHeader } from "@/components/page-header"
-import { ExportButtons } from "@/components/export-buttons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { CARRERAS } from "@/lib/mock/carreras"
-import type { ExportColumn } from "@/lib/utils/export"
-import type { Usuario } from "@/lib/types/database"
 
 export default function CoordDocentesPage() {
   return (
@@ -28,40 +25,11 @@ function Content() {
   const carrera = CARRERAS.find((c) => c.id === user.carrera_id)
   const docentes = usuarios.filter((u) => u.rol === "docente" && u.carrera_id === user.carrera_id)
 
-  const columns: ExportColumn<Usuario>[] = [
-    { header: "Nombres", accessor: (r) => r.nombres },
-    { header: "Apellidos", accessor: (r) => r.apellidos },
-    { header: "Cedula", accessor: (r) => r.cedula },
-    { header: "Email", accessor: (r) => r.email },
-    {
-      header: "Silabos OK",
-      accessor: (r) =>
-        `${silabos.filter((s) => s.docente_id === r.id && s.estado === "aprobado").length}/${silabos.filter((s) => s.docente_id === r.id).length}`,
-    },
-    {
-      header: "Informes OK",
-      accessor: (r) =>
-        `${informes.filter((i) => i.docente_id === r.id && i.estado === "aprobado").length}/${informes.filter((i) => i.docente_id === r.id).length}`,
-    },
-    { header: "Vinculacion", accessor: (r) => (r.tiene_vinculacion ? "Si" : "No") },
-    { header: "Investigacion", accessor: (r) => (r.tiene_investigacion ? "Si" : "No") },
-    { header: "Activo", accessor: (r) => (r.activo ? "Si" : "No") },
-  ]
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Docentes"
         description={carrera ? `Equipo docente de ${carrera.nombre}` : "Docentes asignados a tu carrera"}
-        actions={
-          <ExportButtons
-            filename={`docentes_${user.carrera_id}`}
-            title="Docentes de la carrera"
-            subtitle={carrera?.nombre}
-            columns={columns}
-            rows={docentes}
-          />
-        }
       />
 
       <Card>

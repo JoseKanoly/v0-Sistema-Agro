@@ -2,12 +2,13 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { authClient } from "@/lib/auth-client"
+import { signInAction } from "@/app/actions/auth"
 import { GraduationCap, Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import { credencialesDemo } from "@/lib/mock/users"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,22 +19,27 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) { toast.error("Complete todos los campos"); return }
+    if (!email) { toast.error("Ingrese su correo institucional"); return }
     setLoading(true)
     try {
-      const res = await authClient.signIn.email({ email, password })
-      if (res.error) {
-        toast.error("Credenciales incorrectas. Verifique su correo y contrasena.")
+      const res = await signInAction(email, password)
+      if (!res.ok) {
+        toast.error(res.error)
       } else {
         toast.success("Sesion iniciada correctamente")
         router.push("/dashboard")
         router.refresh()
       }
     } catch {
-      toast.error("Error al conectar con el servidor")
+      toast.error("Error inesperado. Intente nuevamente.")
     } finally {
       setLoading(false)
     }
+  }
+
+  const loginAs = (correo: string) => {
+    setEmail(correo)
+    setPassword("demo1234")
   }
 
   return (
@@ -56,12 +62,20 @@ export default function LoginPage() {
           <p className="text-[#6b9a7f] text-lg leading-relaxed text-pretty">
             Plataforma unificada para docentes, estudiantes, coordinadores y secretaria.
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            {["Docencia", "Vinculacion", "Investigacion", "Titulacion", "Laboratorios", "Reportes"].map((m) => (
-              <div key={m} className="bg-[#1a3d27] rounded-xl p-3 border border-[#1e3a2a]">
-                <p className="text-[#22c55e] font-semibold text-sm">{m}</p>
-              </div>
-            ))}
+          <div className="space-y-2">
+            <p className="text-[#4a6b56] text-xs uppercase tracking-wider font-semibold mb-3">Accesos rapidos demo</p>
+            <div className="grid grid-cols-1 gap-2">
+              {credencialesDemo.map((c) => (
+                <button
+                  key={c.correo}
+                  onClick={() => loginAs(c.correo)}
+                  className="flex items-center justify-between bg-[#1a3d27] hover:bg-[#22c55e]/10 rounded-xl p-3 border border-[#1e3a2a] transition-colors text-left"
+                >
+                  <span className="text-[#22c55e] font-semibold text-sm">{c.rol}</span>
+                  <span className="text-[#4a6b56] text-xs truncate ml-2">{c.correo}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <p className="text-[#4a6b56] text-sm">&copy; {new Date().getFullYear()} SISPAA. Todos los derechos reservados.</p>
@@ -79,7 +93,7 @@ export default function LoginPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-8">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-[#0f172a]">Iniciar sesion</h2>
-              <p className="text-sm text-[#64748b] mt-1">Ingrese su correo institucional y contrasena</p>
+              <p className="text-sm text-[#64748b] mt-1">Ingrese su correo institucional</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
@@ -130,7 +144,7 @@ export default function LoginPage() {
             </form>
           </div>
           <p className="text-center text-xs text-[#94a3b8] mt-4">
-            El administrador del sistema gestiona el acceso de usuarios.
+            Use cualquier acceso rapido del panel izquierdo para ingresar como demo.
           </p>
         </div>
       </div>

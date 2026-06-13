@@ -1,25 +1,25 @@
 import { redirect } from "next/navigation"
 import { getCurrentPerfil } from "@/app/actions/auth"
-import { db } from "@/lib/db"
-import {
-  silabos, informes, documentosEstudiante, justificaciones,
-  proyectosVinculacion, proyectosInvestigacion, hitosInvestigacion,
-  temasTitulacion, notificaciones, user, perfiles, carreras, materias,
-  matriculas, faltas, laboratorios
-} from "@/lib/db/schema"
-import { eq, count, and } from "drizzle-orm"
+import { carrerasMock } from "@/lib/mock/carreras"
+import { usuariosMock } from "@/lib/mock/users"
+import { informesDocenciaMock } from "@/lib/mock/docencia"
+import { temasTitulacionMock } from "@/lib/mock/titulacion"
+import { laboratoriosMock } from "@/lib/mock/laboratorio"
+import { actividadesVinculacionMock } from "@/lib/mock/vinculacion"
+import { informesInvestigacionMock } from "@/lib/mock/docencia"
+import { justificacionesMock } from "@/lib/mock/academico"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line
+  ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts"
-import { FileText, BookOpen, Users, Award, Microscope, Bell, ClipboardCheck, FlaskConical, GraduationCap, Calendar } from "lucide-react"
+import { FileText, BookOpen, Users, Award, Microscope, Bell, ClipboardCheck, FlaskConical, GraduationCap } from "lucide-react"
 
 const C = ["#1a6b3c", "#22c55e", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6"]
 
 function StatCard({ label, value, sub, icon: Icon, color = "#1a6b3c" }: {
   label: string; value: string | number; sub?: string
-  icon: React.ComponentType<{ className?: string }>; color?: string
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; color?: string
 }) {
   return (
     <Card className="border-[#e2e8f0]">
@@ -43,58 +43,35 @@ export default async function DashboardPage() {
   const data = await getCurrentPerfil()
   if (!data?.user) redirect("/auth/login")
   const { user: u, perfil } = data
-  const rol = perfil?.rol ?? "estudiante"
+  const rawRol = (perfil?.rol ?? "estudiante").toLowerCase()
 
-  // Fetch counts based on role
-  const [totalSilabos, totalInformes, totalDocs, totalJust, totalVinc, totalInv, totalHitos, totalTit, totalLabs] =
-    await Promise.all([
-      db.select({ c: count() }).from(silabos),
-      db.select({ c: count() }).from(informes),
-      db.select({ c: count() }).from(documentosEstudiante),
-      db.select({ c: count() }).from(justificaciones),
-      db.select({ c: count() }).from(proyectosVinculacion),
-      db.select({ c: count() }).from(proyectosInvestigacion),
-      db.select({ c: count() }).from(hitosInvestigacion),
-      db.select({ c: count() }).from(temasTitulacion),
-      db.select({ c: count() }).from(laboratorios),
-    ])
+  const totalSilabos = informesDocenciaMock.filter((i) => i.tipo === "silabo").length
+  const totalInformes = informesDocenciaMock.filter((i) => i.tipo === "asignatura").length
+  const pendSil = informesDocenciaMock.filter((i) => i.tipo === "silabo" && i.estado === "pendiente").length
+  const pendInf = informesDocenciaMock.filter((i) => i.tipo === "asignatura" && i.estado === "pendiente").length
+  const pendJust = justificacionesMock.filter((j) => j.estado === "pendiente").length
+  const totalVinc = actividadesVinculacionMock.length
+  const totalInv = informesInvestigacionMock.length
+  const totalTit = temasTitulacionMock.length
+  const totalLabs = laboratoriosMock.length
+  const totalDocentes = usuariosMock.filter((u) => u.rol === "DOCENTE").length
+  const totalEstudiantes = usuariosMock.filter((u) => u.rol === "ESTUDIANTE").length
 
-  const n = (r: { c: number }[]) => r[0]?.c ?? 0
-
-  // Pending counts
-  const [pendSil, pendInf, pendDocs, pendJust] = await Promise.all([
-    db.select({ c: count() }).from(silabos).where(eq(silabos.estado, "pendiente")),
-    db.select({ c: count() }).from(informes).where(eq(informes.estado, "pendiente")),
-    db.select({ c: count() }).from(documentosEstudiante).where(eq(documentosEstudiante.estado, "pendiente")),
-    db.select({ c: count() }).from(justificaciones).where(eq(justificaciones.estado, "pendiente")),
-  ])
-
-  // Per-user counts
-  const [mySil, myInf, myDocs, myJust, myTit, myNotif] = await Promise.all([
-    db.select({ c: count() }).from(silabos).where(eq(silabos.docenteId, u.id)),
-    db.select({ c: count() }).from(informes).where(eq(informes.docenteId, u.id)),
-    db.select({ c: count() }).from(documentosEstudiante).where(eq(documentosEstudiante.estudianteId, u.id)),
-    db.select({ c: count() }).from(justificaciones).where(eq(justificaciones.solicitanteId, u.id)),
-    db.select({ c: count() }).from(temasTitulacion).where(eq(temasTitulacion.estudianteId, u.id)),
-    db.select({ c: count() }).from(notificaciones).where(and(eq(notificaciones.destinatarioId, u.id), eq(notificaciones.leida, false))),
-  ])
-
-  const allCarreras = await db.select().from(carreras).where(eq(carreras.activa, true))
-  const allPerfiles = await db.select().from(perfiles)
-
-  const carreraStats = allCarreras.map((c) => ({
-    name: c.nombre.replace("Ingenieria en ", "Ing. ").replace("Ingenieria ", "Ing. "),
-    docentes: allPerfiles.filter((p) => p.rol === "docente" && p.carreraId === c.id).length,
-    estudiantes: allPerfiles.filter((p) => p.rol === "estudiante" && p.carreraId === c.id).length,
+  const carreraStats = carrerasMock.map((c) => ({
+    name: c.siglas,
+    docentes: usuariosMock.filter((u) => u.rol === "DOCENTE" && u.carreraId === c.id).length,
+    estudiantes: usuariosMock.filter((u) => u.rol === "ESTUDIANTE" && u.carreraId === c.id).length,
   }))
 
   const pieData = [
-    { name: "Silabos", value: n(totalSilabos), fill: C[0] },
-    { name: "Informes", value: n(totalInformes), fill: C[1] },
-    { name: "Vinculacion", value: n(totalVinc), fill: C[2] },
-    { name: "Investigacion", value: n(totalInv), fill: C[3] },
-    { name: "Titulacion", value: n(totalTit), fill: C[4] },
+    { name: "Silabos", value: totalSilabos, fill: C[0] },
+    { name: "Informes", value: totalInformes, fill: C[1] },
+    { name: "Vinculacion", value: totalVinc, fill: C[2] },
+    { name: "Investigacion", value: totalInv, fill: C[3] },
+    { name: "Titulacion", value: totalTit, fill: C[4] },
   ]
+
+  const nombreDisplay = u.name.split(" ")[0]
 
   return (
     <div className="space-y-6">
@@ -103,7 +80,7 @@ export default async function DashboardPage() {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#0f172a]">
-              Bienvenido, {u.name.split(" ")[0]}
+              Bienvenido, {nombreDisplay}
             </h1>
             <p className="text-[#64748b] mt-1">
               {new Date().toLocaleDateString("es-EC", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
@@ -111,54 +88,54 @@ export default async function DashboardPage() {
           </div>
           <div className="text-right">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#e8f5ee] text-[#1a6b3c]">
-              {rol.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+              {rawRol.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())}
             </span>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards - Role based */}
-      {(rol === "super_admin" || rol === "secretaria") && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Silabos" value={n(totalSilabos)} sub={`${n(pendSil)} pendientes`} icon={BookOpen} color="#1a6b3c" />
-          <StatCard label="Informes" value={n(totalInformes)} sub={`${n(pendInf)} pendientes`} icon={FileText} color="#3b82f6" />
-          <StatCard label="Docs. Estudiantes" value={n(totalDocs)} sub={`${n(pendDocs)} pendientes`} icon={GraduationCap} color="#f59e0b" />
-          <StatCard label="Justificaciones" value={n(totalJust)} sub={`${n(pendJust)} pendientes`} icon={ClipboardCheck} color="#8b5cf6" />
-        </div>
+      {/* KPIs - Admin / Super Admin */}
+      {(rawRol === "super_admin" || rawRol === "administrador" || rawRol === "secretaria") && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Silabos" value={totalSilabos} sub={`${pendSil} pendientes`} icon={BookOpen} color="#1a6b3c" />
+            <StatCard label="Informes" value={totalInformes} sub={`${pendInf} pendientes`} icon={FileText} color="#3b82f6" />
+            <StatCard label="Justificaciones" value={justificacionesMock.length} sub={`${pendJust} pendientes`} icon={ClipboardCheck} color="#8b5cf6" />
+            <StatCard label="Usuarios" value={usuariosMock.length} sub={`${totalDocentes} docentes`} icon={Users} color="#f59e0b" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Proyectos Vinculacion" value={totalVinc} icon={Award} color="#22c55e" />
+            <StatCard label="Investigacion" value={totalInv} icon={Microscope} color="#ef4444" />
+            <StatCard label="Temas Titulacion" value={totalTit} icon={GraduationCap} color="#1a6b3c" />
+            <StatCard label="Laboratorios" value={totalLabs} icon={FlaskConical} color="#f59e0b" />
+          </div>
+        </>
       )}
-      {(rol === "super_admin" || rol === "secretaria") && (
+
+      {rawRol === "coordinador" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Proyectos Vinculacion" value={n(totalVinc)} icon={Award} color="#22c55e" />
-          <StatCard label="Proyectos Investigacion" value={n(totalInv)} icon={Microscope} color="#ef4444" />
-          <StatCard label="Temas Titulacion" value={n(totalTit)} icon={GraduationCap} color="#1a6b3c" />
-          <StatCard label="Laboratorios" value={n(totalLabs)} icon={FlaskConical} color="#f59e0b" />
+          <StatCard label="Silabos" value={totalSilabos} sub={`${pendSil} pendientes`} icon={BookOpen} color="#1a6b3c" />
+          <StatCard label="Proyectos" value={totalInv + totalVinc} icon={Microscope} color="#3b82f6" />
+          <StatCard label="Titulacion" value={totalTit} icon={GraduationCap} color="#f59e0b" />
+          <StatCard label="Laboratorios" value={totalLabs} icon={FlaskConical} color="#22c55e" />
         </div>
       )}
 
-      {rol === "docente" && (
+      {rawRol === "docente" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Mis Silabos" value={n(mySil)} icon={BookOpen} color="#1a6b3c" />
-          <StatCard label="Mis Informes" value={n(myInf)} icon={FileText} color="#3b82f6" />
-          <StatCard label="Notificaciones" value={n(myNotif)} sub="sin leer" icon={Bell} color="#f59e0b" />
-          <StatCard label="Total Entregas" value={n(mySil) + n(myInf)} icon={ClipboardCheck} color="#8b5cf6" />
+          <StatCard label="Mis Silabos" value={informesDocenciaMock.filter((i) => i.tipo === "silabo").length} icon={BookOpen} color="#1a6b3c" />
+          <StatCard label="Mis Informes" value={informesDocenciaMock.filter((i) => i.tipo === "asignatura").length} icon={FileText} color="#3b82f6" />
+          <StatCard label="Titulacion" value={totalTit} icon={Award} color="#f59e0b" />
+          <StatCard label="Laboratorios" value={totalLabs} icon={FlaskConical} color="#8b5cf6" />
         </div>
       )}
 
-      {rol === "estudiante" && (
+      {rawRol === "estudiante" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Mis Documentos" value={n(myDocs)} icon={FileText} color="#1a6b3c" />
-          <StatCard label="Justificaciones" value={n(myJust)} icon={ClipboardCheck} color="#3b82f6" />
-          <StatCard label="Tema Titulacion" value={n(myTit) > 0 ? "Asignado" : "Pendiente"} icon={GraduationCap} color={n(myTit) > 0 ? "#22c55e" : "#f59e0b"} />
-          <StatCard label="Notificaciones" value={n(myNotif)} sub="sin leer" icon={Bell} color="#8b5cf6" />
-        </div>
-      )}
-
-      {(rol === "coordinador_carrera" || rol === "coordinador_investigacion") && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Silabos" value={n(totalSilabos)} sub={`${n(pendSil)} pendientes`} icon={BookOpen} color="#1a6b3c" />
-          <StatCard label="Proyectos" value={n(totalInv) + n(totalVinc)} icon={Microscope} color="#3b82f6" />
-          <StatCard label="Titulacion" value={n(totalTit)} icon={GraduationCap} color="#f59e0b" />
-          <StatCard label="Laboratorios" value={n(totalLabs)} icon={FlaskConical} color="#22c55e" />
+          <StatCard label="Justificaciones" value={justificacionesMock.length} icon={ClipboardCheck} color="#1a6b3c" />
+          <StatCard label="Titulacion" value={temasTitulacionMock.filter((t) => t.estado === "en_progreso").length} sub="en progreso" icon={GraduationCap} color="#3b82f6" />
+          <StatCard label="Docentes" value={totalDocentes} icon={Users} color="#f59e0b" />
+          <StatCard label="Laboratorios" value={totalLabs} icon={FlaskConical} color="#22c55e" />
         </div>
       )}
 
@@ -172,7 +149,8 @@ export default async function DashboardPage() {
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={100} paddingAngle={3} label={({ name, value }) => value > 0 ? `${name}: ${value}` : ""}>
+                <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={100} paddingAngle={3}
+                  label={({ name, value }: { name: string; value: number }) => value > 0 ? `${name}: ${value}` : ""}>
                   {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
                 <Legend />
@@ -203,8 +181,8 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Pending review summary for secretaria / admin */}
-      {(rol === "super_admin" || rol === "secretaria") && (
+      {/* Pending review */}
+      {(rawRol === "super_admin" || rawRol === "administrador" || rawRol === "secretaria") && (
         <Card className="border-[#e2e8f0]">
           <CardHeader>
             <CardTitle className="text-[#0f172a]">Elementos pendientes de revision</CardTitle>
@@ -212,12 +190,15 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={[
-                { name: "Silabos", value: n(pendSil) },
-                { name: "Informes", value: n(pendInf) },
-                { name: "Documentos", value: n(pendDocs) },
-                { name: "Justificaciones", value: n(pendJust) },
-              ]} layout="vertical">
+              <BarChart
+                data={[
+                  { name: "Silabos", value: pendSil },
+                  { name: "Informes", value: pendInf },
+                  { name: "Justificaciones", value: pendJust },
+                  { name: "Investigacion", value: informesInvestigacionMock.filter((i) => i.estado === "pendiente").length },
+                ]}
+                layout="vertical"
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={100} />

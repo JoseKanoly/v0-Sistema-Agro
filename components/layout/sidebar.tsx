@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
-import { authClient } from "@/lib/auth-client"
+import { signOutAction } from "@/app/actions/auth"
 import {
   LayoutDashboard, Users, BookOpen, GraduationCap, FlaskConical,
   FileText, CalendarCheck, Bell, Settings, LogOut, ChevronDown,
@@ -129,7 +129,7 @@ export function Sidebar({ rol, userName, userEmail }: SidebarProps) {
   const isActive = (href: string) => pathname === href || (href !== "/dashboard" && pathname.startsWith(href))
 
   const handleSignOut = async () => {
-    await authClient.signOut()
+    await signOutAction()
     router.push("/auth/login")
     router.refresh()
   }

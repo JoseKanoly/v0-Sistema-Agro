@@ -10,28 +10,51 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter()
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) { toast.error("Complete todos los campos"); return }
+    
+    if (!name || !email || !password || !confirmPassword) {
+      toast.error("Complete todos los campos")
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Las contrasenas no coinciden")
+      return
+    }
+
+    if (password.length < 8) {
+      toast.error("La contrasena debe tener al menos 8 caracteres")
+      return
+    }
+
     setLoading(true)
     try {
-      const res = await authClient.signIn.email({ email, password })
+      const res = await authClient.signUp.email({
+        name,
+        email,
+        password,
+      })
+
       if (res.error) {
-        toast.error("Credenciales incorrectas. Verifique su correo y contrasena.")
+        toast.error("Error al registrar: " + (res.error?.message || "Intente nuevamente"))
       } else {
-        toast.success("Sesion iniciada correctamente")
+        toast.success("Registro exitoso. Redirigiendo...")
         router.push("/dashboard")
         router.refresh()
       }
-    } catch {
-      toast.error("Error al conectar con el servidor")
+    } catch (error: any) {
+      toast.error(error?.message || "Error al conectar con el servidor")
     } finally {
       setLoading(false)
     }
@@ -68,7 +91,7 @@ export default function LoginPage() {
         <p className="text-[#4a6b56] text-sm">&copy; {new Date().getFullYear()} SISPAA. Todos los derechos reservados.</p>
       </div>
 
-      {/* Right login panel */}
+      {/* Right signup panel */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-8">
@@ -79,10 +102,21 @@ export default function LoginPage() {
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-[#0f172a]">Iniciar sesion</h2>
-              <p className="text-sm text-[#64748b] mt-1">Ingrese su correo institucional y contrasena</p>
+              <h2 className="text-2xl font-bold text-[#0f172a]">Crear cuenta</h2>
+              <p className="text-sm text-[#64748b] mt-1">Registrese en la plataforma SISPAA</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-sm font-medium text-[#0f172a]">Nombre completo</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Juan Perez"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-10 border-[#e2e8f0]"
+                />
+              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-sm font-medium text-[#0f172a]">Correo institucional</Label>
                 <Input
@@ -105,7 +139,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="h-10 border-[#e2e8f0] pr-10"
-                    autoComplete="current-password"
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"
@@ -113,6 +147,27 @@ export default function LoginPage() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a]"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium text-[#0f172a]">Confirmar contrasena</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-10 border-[#e2e8f0] pr-10"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a]"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -124,16 +179,16 @@ export default function LoginPage() {
                 {loading ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Ingresando...
+                    Registrando...
                   </span>
-                ) : "Ingresar al sistema"}
+                ) : "Crear cuenta"}
               </Button>
             </form>
           </div>
           <p className="text-center text-xs text-[#94a3b8] mt-4">
-            No tiene cuenta?{" "}
-            <Link href="/auth/signup" className="text-[#1a6b3c] font-semibold hover:underline">
-              Registrese aqui
+            Ya tiene una cuenta?{" "}
+            <Link href="/auth/login" className="text-[#1a6b3c] font-semibold hover:underline">
+              Inicie sesion aqui
             </Link>
           </p>
         </div>

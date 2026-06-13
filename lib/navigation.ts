@@ -10,6 +10,10 @@ import {
   Award,
   FileText,
   Microscope,
+  Bell,
+  UserCircle,
+  ClipboardCheck,
+  CalendarCheck,
   type LucideIcon,
 } from "lucide-react"
 import type { Rol } from "@/lib/types/database"
@@ -39,8 +43,8 @@ export const navItems: NavItem[] = [
     icon: BookOpen,
     roles: [...GESTION, "DOCENTE", "SECRETARIA"],
     children: [
-      { label: "Informes de asignatura", href: "/dashboard/docencia" },
-      { label: "Sílabos", href: "/dashboard/docencia/silabos" },
+      { label: "Informes de asignatura", href: "/dashboard/informes" },
+      { label: "Sílabos", href: "/dashboard/silabos" },
     ],
   },
   {
@@ -64,18 +68,32 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    label: "Mis Documentos",
+    icon: FileText,
+    href: "/dashboard/mis-documentos",
+    roles: ["ESTUDIANTE"],
+  },
+  {
+    label: "Mis Asistencias",
+    icon: CalendarCheck,
+    href: "/dashboard/mis-asistencias",
+    roles: ["ESTUDIANTE"],
+  },
+  {
+    label: "Mis Justificaciones",
+    icon: ClipboardCheck,
+    href: "/dashboard/mis-justificaciones",
+    roles: ["ESTUDIANTE"],
+  },
+  {
     label: "Laboratorio",
     icon: FlaskConical,
     roles: [...GESTION, "DOCENTE", "SECRETARIA"],
     children: [
       { label: "Dashboard", href: "/dashboard/laboratorio" },
-      { label: "Registrar práctica", href: "/dashboard/laboratorio/registrar" },
       { label: "Prácticas", href: "/dashboard/laboratorio/practicas" },
-      { label: "Por carrera", href: "/dashboard/laboratorio/por-carrera" },
-      { label: "Ubicaciones", href: "/dashboard/laboratorio/ubicaciones" },
       { label: "Equipos", href: "/dashboard/laboratorio/equipos" },
       { label: "Reactivos", href: "/dashboard/laboratorio/reactivos" },
-      { label: "Asistencia", href: "/dashboard/laboratorio/asistencia" },
     ],
   },
   {
@@ -91,18 +109,26 @@ export const navItems: NavItem[] = [
   {
     label: "Titulación",
     icon: Award,
-    roles: [...GESTION, "DOCENTE", "ESTUDIANTE"],
+    roles: [...GESTION, "DOCENTE"],
     children: [
       { label: "Temas", href: "/dashboard/titulacion" },
-      { label: "En proceso", href: "/dashboard/titulacion/en-proceso" },
-      { label: "Titulados", href: "/dashboard/titulacion/titulados" },
+      { label: "Investigación", href: "/dashboard/investigacion" },
     ],
+  },
+  {
+    label: "Mi Titulación",
+    icon: Award,
+    href: "/dashboard/mi-titulacion",
+    roles: ["ESTUDIANTE"],
   },
 
   { label: "Usuarios", icon: Users, href: "/dashboard/usuarios", roles: ADMINS },
   { label: "Carreras", icon: Building2, href: "/dashboard/carreras", roles: GESTION },
   { label: "Materias", icon: FileText, href: "/dashboard/materias", roles: GESTION },
   { label: "Periodos", icon: CalendarRange, href: "/dashboard/periodos", roles: ADMINS },
+
+  { label: "Notificaciones", icon: Bell, href: "/dashboard/notificaciones", roles: ALL },
+  { label: "Perfil", icon: UserCircle, href: "/dashboard/perfil", roles: ALL },
 ]
 
 export const ROLE_LABELS: Record<Rol, string> = {

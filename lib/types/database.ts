@@ -230,3 +230,26 @@ export interface InformeInvestigacion {
   fecha: string
   estado: "pendiente" | "aprobado" | "rechazado"
 }
+
+export type TipoConvocatoria = "documentos" | "silabos" | "informes" | "matriculas" | "titulacion"
+
+export interface Convocatoria {
+  id: number
+  titulo: string
+  tipo: TipoConvocatoria
+  fechaInicio: string
+  fechaLimite: string
+  dirigidoA: Rol | "TODOS"
+  estado: "abierta" | "cerrada" | "proxima"
+}
+
+export interface DocumentoRevision {
+  id: number
+  estudiante: string
+  cedula: string
+  carreraId: number
+  tipo: string
+  nombre: string
+  fecha: string
+  estado: "pendiente" | "aprobado" | "rechazado"
+}

@@ -9,6 +9,8 @@ import { laboratoriosMock, equiposMock, reactivosMock, practicasMock } from "@/l
 import { lideresVinculacionMock, actividadesVinculacionMock, empresasVinculacionMock } from "@/lib/mock/vinculacion"
 import { temasTitulacionMock } from "@/lib/mock/titulacion"
 import { informesDocenciaMock, informesInvestigacionMock } from "@/lib/mock/docencia"
+import { convocatoriasMock } from "@/lib/mock/convocatorias"
+import { documentosRevisionMock } from "@/lib/mock/documentos"
 
 export const CarreraService = createService(carrerasMock)
 export const UsuarioService = createService(usuariosMock)
@@ -28,3 +30,5 @@ export const EmpresaVinculacionService = createService(empresasVinculacionMock)
 export const TitulacionService = createService(temasTitulacionMock)
 export const DocenciaService = createService(informesDocenciaMock)
 export const InvestigacionService = createService(informesInvestigacionMock)
+export const ConvocatoriaService = createService(convocatoriasMock)
+export const DocumentoRevisionService = createService(documentosRevisionMock)

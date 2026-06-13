@@ -1,297 +1,179 @@
-"use client"
-
-import { useAuth } from "@/lib/auth/auth-context"
-import { useData } from "@/lib/mock/store"
-import { PageHeader } from "@/components/page-header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ROLE_LABELS } from "@/lib/navigation"
-import { CARRERAS } from "@/lib/mock/carreras"
+import { redirect } from "next/navigation"
+import { getCurrentPerfil } from "@/app/actions/auth"
+import { db } from "@/lib/db"
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
+  silabos, informes, documentosEstudiante, justificaciones,
+  proyectosVinculacion, proyectosInvestigacion, hitosInvestigacion,
+  temasTitulacion, notificaciones, user, perfiles, carreras, materias,
+  matriculas, faltas, laboratorios
+} from "@/lib/db/schema"
+import { eq, count, and } from "drizzle-orm"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line
 } from "recharts"
-import { FileText, BookOpen, CheckSquare, Users, Award, Microscope, Handshake, Bell } from "lucide-react"
-import { StatusBadge } from "@/components/status-badge"
+import { FileText, BookOpen, Users, Award, Microscope, Bell, ClipboardCheck, FlaskConical, GraduationCap, Calendar } from "lucide-react"
 
-const CHART_COLORS = ["oklch(0.646 0.222 41.116)", "oklch(0.6 0.118 184.704)", "oklch(0.769 0.188 70.08)"]
+const C = ["#1a6b3c", "#22c55e", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6"]
 
-function StatCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string
-  value: string | number
-  hint?: string
-  icon: React.ComponentType<{ className?: string }>
+function StatCard({ label, value, sub, icon: Icon, color = "#1a6b3c" }: {
+  label: string; value: string | number; sub?: string
+  icon: React.ComponentType<{ className?: string }>; color?: string
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between gap-4 pt-6">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
-          <p className="mt-1 text-2xl font-semibold">{value}</p>
-          {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" />
+    <Card className="border-[#e2e8f0]">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium text-[#64748b] uppercase tracking-wider">{label}</p>
+            <p className="text-3xl font-bold text-[#0f172a] mt-1">{value}</p>
+            {sub && <p className="text-xs text-[#64748b] mt-1">{sub}</p>}
+          </div>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: color + "18" }}>
+            <Icon className="w-5 h-5" style={{ color }} />
+          </div>
         </div>
       </CardContent>
     </Card>
   )
 }
 
-export default function DashboardPage() {
-  const { user } = useAuth()
-  const {
-    documentos,
-    asistencias,
-    justificaciones,
-    silabos,
-    informes,
-    vinculacion,
-    titulacion,
-    proyectos,
-    hitos,
-    usuarios,
-    notificaciones,
-  } = useData()
+export default async function DashboardPage() {
+  const data = await getCurrentPerfil()
+  if (!data?.user) redirect("/auth/login")
+  const { user: u, perfil } = data
+  const rol = perfil?.rol ?? "estudiante"
 
-  if (!user) return null
+  // Fetch counts based on role
+  const [totalSilabos, totalInformes, totalDocs, totalJust, totalVinc, totalInv, totalHitos, totalTit, totalLabs] =
+    await Promise.all([
+      db.select({ c: count() }).from(silabos),
+      db.select({ c: count() }).from(informes),
+      db.select({ c: count() }).from(documentosEstudiante),
+      db.select({ c: count() }).from(justificaciones),
+      db.select({ c: count() }).from(proyectosVinculacion),
+      db.select({ c: count() }).from(proyectosInvestigacion),
+      db.select({ c: count() }).from(hitosInvestigacion),
+      db.select({ c: count() }).from(temasTitulacion),
+      db.select({ c: count() }).from(laboratorios),
+    ])
 
-  const noLeidas = notificaciones.filter((n) => n.destinatario_id === user.id && !n.leida).length
+  const n = (r: { c: number }[]) => r[0]?.c ?? 0
 
-  // ===== VISTA POR ROL =====
+  // Pending counts
+  const [pendSil, pendInf, pendDocs, pendJust] = await Promise.all([
+    db.select({ c: count() }).from(silabos).where(eq(silabos.estado, "pendiente")),
+    db.select({ c: count() }).from(informes).where(eq(informes.estado, "pendiente")),
+    db.select({ c: count() }).from(documentosEstudiante).where(eq(documentosEstudiante.estado, "pendiente")),
+    db.select({ c: count() }).from(justificaciones).where(eq(justificaciones.estado, "pendiente")),
+  ])
 
-  if (user.rol === "estudiante") {
-    const misDocs = documentos.filter((d) => d.estudiante_id === user.id)
-    const misAsist = asistencias.filter((a) => a.estudiante_id === user.id)
-    const misJust = justificaciones.filter((j) => j.solicitante_id === user.id)
-    const miTit = titulacion.find((t) => t.estudiante_id === user.id)
-    const aprobados = misDocs.filter((d) => d.estado === "aprobado").length
-    const pendientes = misDocs.filter((d) => d.estado === "pendiente").length
-    const rechazados = misDocs.filter((d) => d.estado === "rechazado").length
-    const data = [
-      { name: "Aprobados", value: aprobados },
-      { name: "Pendientes", value: pendientes },
-      { name: "Rechazados", value: rechazados },
-    ]
+  // Per-user counts
+  const [mySil, myInf, myDocs, myJust, myTit, myNotif] = await Promise.all([
+    db.select({ c: count() }).from(silabos).where(eq(silabos.docenteId, u.id)),
+    db.select({ c: count() }).from(informes).where(eq(informes.docenteId, u.id)),
+    db.select({ c: count() }).from(documentosEstudiante).where(eq(documentosEstudiante.estudianteId, u.id)),
+    db.select({ c: count() }).from(justificaciones).where(eq(justificaciones.solicitanteId, u.id)),
+    db.select({ c: count() }).from(temasTitulacion).where(eq(temasTitulacion.estudianteId, u.id)),
+    db.select({ c: count() }).from(notificaciones).where(and(eq(notificaciones.destinatarioId, u.id), eq(notificaciones.leida, false))),
+  ])
 
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title={`Bienvenido, ${user.nombres.split(" ")[0]}`}
-          description={`Resumen de tu actividad como ${ROLE_LABELS[user.rol]}.`}
-        />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Documentos" value={`${misDocs.length}/5`} hint="Subidos al SGA" icon={FileText} />
-          <StatCard label="Faltas" value={misAsist.length} hint="Registradas este periodo" icon={CheckSquare} />
-          <StatCard label="Justificaciones" value={misJust.length} icon={BookOpen} />
-          <StatCard label="Notificaciones" value={noLeidas} hint="Sin leer" icon={Bell} />
-        </div>
+  const allCarreras = await db.select().from(carreras).where(eq(carreras.activa, true))
+  const allPerfiles = await db.select().from(perfiles)
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Estado de tus documentos</CardTitle>
-              <CardDescription>Distribucion por estado de revision</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie data={data} dataKey="value" nameKey="name" outerRadius={90} label>
-                    {data.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i]} />
-                    ))}
-                  </Pie>
-                  <Legend />
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+  const carreraStats = allCarreras.map((c) => ({
+    name: c.nombre.replace("Ingenieria en ", "Ing. ").replace("Ingenieria ", "Ing. "),
+    docentes: allPerfiles.filter((p) => p.rol === "docente" && p.carreraId === c.id).length,
+    estudiantes: allPerfiles.filter((p) => p.rol === "estudiante" && p.carreraId === c.id).length,
+  }))
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Mi titulacion</CardTitle>
-              <CardDescription>Tema asignado por la secretaria</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {miTit ? (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">{miTit.tema}</p>
-                  <p className="text-xs text-muted-foreground">{miTit.descripcion}</p>
-                  <p className="text-xs">
-                    Tutor:{" "}
-                    <span className="font-medium">
-                      {usuarios.find((u) => u.id === miTit.docente_id)?.nombres}{" "}
-                      {usuarios.find((u) => u.id === miTit.docente_id)?.apellidos}
-                    </span>
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Aun no se te ha asignado tema de titulacion.</p>
-              )}
-            </CardContent>
-          </Card>
+  const pieData = [
+    { name: "Silabos", value: n(totalSilabos), fill: C[0] },
+    { name: "Informes", value: n(totalInformes), fill: C[1] },
+    { name: "Vinculacion", value: n(totalVinc), fill: C[2] },
+    { name: "Investigacion", value: n(totalInv), fill: C[3] },
+    { name: "Titulacion", value: n(totalTit), fill: C[4] },
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white border border-[#e2e8f0] rounded-2xl p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#0f172a]">
+              Bienvenido, {u.name.split(" ")[0]}
+            </h1>
+            <p className="text-[#64748b] mt-1">
+              {new Date().toLocaleDateString("es-EC", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#e8f5ee] text-[#1a6b3c]">
+              {rol.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+            </span>
+          </div>
         </div>
       </div>
-    )
-  }
 
-  if (user.rol === "docente") {
-    const misSil = silabos.filter((s) => s.docente_id === user.id)
-    const misInf = informes.filter((i) => i.docente_id === user.id)
-    const misVinc = vinculacion.filter((v) => v.docente_id === user.id)
-    const misProy = proyectos.filter((p) => p.docente_id === user.id)
-    const misTit = titulacion.filter((t) => t.docente_id === user.id)
-
-    const data = [
-      { name: "Silabos", aprobados: misSil.filter((s) => s.estado === "aprobado").length, pendientes: misSil.filter((s) => s.estado === "pendiente").length },
-      { name: "Informes", aprobados: misInf.filter((s) => s.estado === "aprobado").length, pendientes: misInf.filter((s) => s.estado === "pendiente").length },
-      { name: "Vinculacion", aprobados: misVinc.filter((s) => s.estado === "aprobado").length, pendientes: misVinc.filter((s) => s.estado === "pendiente").length },
-    ]
-
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title={`Hola, ${user.nombres.split(" ")[0]}`}
-          description={`${ROLE_LABELS[user.rol]} - ${CARRERAS.find((c) => c.id === user.carrera_id)?.nombre ?? ""}`}
-        />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Silabos" value={misSil.length} icon={BookOpen} />
-          <StatCard label="Informes" value={misInf.length} icon={FileText} />
-          <StatCard label="Tutorias" value={misTit.length} icon={Award} />
-          <StatCard
-            label="Asignaciones"
-            value={[user.tiene_vinculacion && "Vinc", user.tiene_investigacion && "Inv"].filter(Boolean).join(" + ") || "Ninguna"}
-            icon={Handshake}
-          />
+      {/* KPI Cards - Role based */}
+      {(rol === "super_admin" || rol === "secretaria") && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Silabos" value={n(totalSilabos)} sub={`${n(pendSil)} pendientes`} icon={BookOpen} color="#1a6b3c" />
+          <StatCard label="Informes" value={n(totalInformes)} sub={`${n(pendInf)} pendientes`} icon={FileText} color="#3b82f6" />
+          <StatCard label="Docs. Estudiantes" value={n(totalDocs)} sub={`${n(pendDocs)} pendientes`} icon={GraduationCap} color="#f59e0b" />
+          <StatCard label="Justificaciones" value={n(totalJust)} sub={`${n(pendJust)} pendientes`} icon={ClipboardCheck} color="#8b5cf6" />
         </div>
+      )}
+      {(rol === "super_admin" || rol === "secretaria") && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Proyectos Vinculacion" value={n(totalVinc)} icon={Award} color="#22c55e" />
+          <StatCard label="Proyectos Investigacion" value={n(totalInv)} icon={Microscope} color="#ef4444" />
+          <StatCard label="Temas Titulacion" value={n(totalTit)} icon={GraduationCap} color="#1a6b3c" />
+          <StatCard label="Laboratorios" value={n(totalLabs)} icon={FlaskConical} color="#f59e0b" />
+        </div>
+      )}
 
-        <Card>
+      {rol === "docente" && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Mis Silabos" value={n(mySil)} icon={BookOpen} color="#1a6b3c" />
+          <StatCard label="Mis Informes" value={n(myInf)} icon={FileText} color="#3b82f6" />
+          <StatCard label="Notificaciones" value={n(myNotif)} sub="sin leer" icon={Bell} color="#f59e0b" />
+          <StatCard label="Total Entregas" value={n(mySil) + n(myInf)} icon={ClipboardCheck} color="#8b5cf6" />
+        </div>
+      )}
+
+      {rol === "estudiante" && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Mis Documentos" value={n(myDocs)} icon={FileText} color="#1a6b3c" />
+          <StatCard label="Justificaciones" value={n(myJust)} icon={ClipboardCheck} color="#3b82f6" />
+          <StatCard label="Tema Titulacion" value={n(myTit) > 0 ? "Asignado" : "Pendiente"} icon={GraduationCap} color={n(myTit) > 0 ? "#22c55e" : "#f59e0b"} />
+          <StatCard label="Notificaciones" value={n(myNotif)} sub="sin leer" icon={Bell} color="#8b5cf6" />
+        </div>
+      )}
+
+      {(rol === "coordinador_carrera" || rol === "coordinador_investigacion") && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Silabos" value={n(totalSilabos)} sub={`${n(pendSil)} pendientes`} icon={BookOpen} color="#1a6b3c" />
+          <StatCard label="Proyectos" value={n(totalInv) + n(totalVinc)} icon={Microscope} color="#3b82f6" />
+          <StatCard label="Titulacion" value={n(totalTit)} icon={GraduationCap} color="#f59e0b" />
+          <StatCard label="Laboratorios" value={n(totalLabs)} icon={FlaskConical} color="#22c55e" />
+        </div>
+      )}
+
+      {/* Charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="border-[#e2e8f0]">
           <CardHeader>
-            <CardTitle>Estado de mis entregas</CardTitle>
-            <CardDescription>Resumen de aprobaciones por modulo</CardDescription>
+            <CardTitle className="text-[#0f172a]">Distribucion por modulo</CardTitle>
+            <CardDescription>Total de registros en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0 0)" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="aprobados" fill={CHART_COLORS[1]} name="Aprobados" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="pendientes" fill={CHART_COLORS[2]} name="Pendientes" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (user.rol === "secretaria") {
-    const docsPend = documentos.filter((d) => d.estado === "pendiente").length
-    const justPend = justificaciones.filter((j) => j.estado === "pendiente").length
-    const silPend = silabos.filter((s) => s.estado === "pendiente").length
-    const infPend = informes.filter((i) => i.estado === "pendiente").length
-
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Panel de secretaria"
-          description="Items en revision agrupados por modulo. Acciona en cada seccion para aprobar o rechazar."
-        />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Documentos estudiantes" value={docsPend} hint="En revision" icon={FileText} />
-          <StatCard label="Justificaciones" value={justPend} hint="En revision" icon={CheckSquare} />
-          <StatCard label="Silabos" value={silPend} hint="En revision" icon={BookOpen} />
-          <StatCard label="Informes" value={infPend} hint="En revision" icon={FileText} />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribucion de revisiones pendientes</CardTitle>
-            <CardDescription>Volumen por modulo</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart
-                data={[
-                  { name: "Documentos", value: docsPend },
-                  { name: "Justificaciones", value: justPend },
-                  { name: "Silabos", value: silPend },
-                  { name: "Informes", value: infPend },
-                  { name: "Vinculacion", value: vinculacion.filter((v) => v.estado === "pendiente").length },
-                ]}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0 0)" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (user.rol === "coordinador_carrera") {
-    const carrera = CARRERAS.find((c) => c.id === user.carrera_id)
-    const docentesCarrera = usuarios.filter((u) => u.rol === "docente" && u.carrera_id === user.carrera_id)
-    const estudiantesCarrera = usuarios.filter((u) => u.rol === "estudiante" && u.carrera_id === user.carrera_id)
-    const silCar = silabos.filter((s) => s.carrera_id === user.carrera_id)
-    const titCar = titulacion.filter((t) => t.carrera_id === user.carrera_id)
-
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Coordinacion de carrera"
-          description={`Indicadores generales de ${carrera?.nombre ?? ""}.`}
-        />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Docentes" value={docentesCarrera.length} icon={Users} />
-          <StatCard label="Estudiantes" value={estudiantesCarrera.length} icon={Users} />
-          <StatCard label="Silabos entregados" value={silCar.length} icon={BookOpen} />
-          <StatCard label="Temas titulacion" value={titCar.length} icon={Award} />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Silabos por estado</CardTitle>
-            <CardDescription>Estado de revision de silabos en tu carrera</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
-                <Pie
-                  data={[
-                    { name: "Aprobados", value: silCar.filter((s) => s.estado === "aprobado").length },
-                    { name: "Pendientes", value: silCar.filter((s) => s.estado === "pendiente").length },
-                    { name: "Rechazados", value: silCar.filter((s) => s.estado === "rechazado").length },
-                  ]}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={90}
-                  label
-                >
-                  {CHART_COLORS.map((c, i) => (
-                    <Cell key={i} fill={c} />
-                  ))}
+                <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={100} paddingAngle={3} label={({ name, value }) => value > 0 ? `${name}: ${value}` : ""}>
+                  {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
                 <Legend />
                 <Tooltip />
@@ -299,132 +181,53 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
-    )
-  }
 
-  if (user.rol === "coordinador_investigacion") {
-    const totalHitos = hitos.length
-    const completados = hitos.filter((h) => h.completado).length
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Coordinacion de investigacion"
-          description="Avance general de los proyectos de investigacion de la facultad."
-        />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Proyectos activos" value={proyectos.length} icon={Microscope} />
-          <StatCard label="Total hitos" value={totalHitos} icon={CheckSquare} />
-          <StatCard label="Hitos completados" value={completados} icon={BookOpen} />
-          <StatCard
-            label="Avance promedio"
-            value={`${totalHitos ? Math.round((completados / totalHitos) * 100) : 0}%`}
-            icon={Award}
-          />
-        </div>
-
-        <Card>
+        <Card className="border-[#e2e8f0]">
           <CardHeader>
-            <CardTitle>Avance por proyecto</CardTitle>
-            <CardDescription>Hitos completados vs pendientes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                data={proyectos.map((p) => {
-                  const proyHitos = hitos.filter((h) => h.proyecto_id === p.id)
-                  return {
-                    name: p.titulo.slice(0, 22) + (p.titulo.length > 22 ? "..." : ""),
-                    completados: proyHitos.filter((h) => h.completado).length,
-                    pendientes: proyHitos.filter((h) => !h.completado).length,
-                  }
-                })}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0 0)" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="completados" stackId="a" fill={CHART_COLORS[1]} name="Completados" />
-                <Bar dataKey="pendientes" stackId="a" fill={CHART_COLORS[2]} name="Pendientes" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // SUPER ADMIN
-  const data = CARRERAS.map((c) => ({
-    name: c.nombre.replace("Ingenieria en ", "").replace("Ingenieria ", ""),
-    estudiantes: usuarios.filter((u) => u.rol === "estudiante" && u.carrera_id === c.id).length,
-    docentes: usuarios.filter((u) => u.rol === "docente" && u.carrera_id === c.id).length,
-  }))
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Panel del super administrador"
-        description="Indicadores institucionales completos."
-      />
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Usuarios activos" value={usuarios.filter((u) => u.activo).length} icon={Users} />
-        <StatCard label="Docentes" value={usuarios.filter((u) => u.rol === "docente").length} icon={Users} />
-        <StatCard label="Estudiantes" value={usuarios.filter((u) => u.rol === "estudiante").length} icon={Users} />
-        <StatCard label="Proyectos investigacion" value={proyectos.length} icon={Microscope} />
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribucion por carrera</CardTitle>
-            <CardDescription>Estudiantes y docentes por carrera</CardDescription>
+            <CardTitle className="text-[#0f172a]">Usuarios por carrera</CardTitle>
+            <CardDescription>Docentes y estudiantes activos</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0 0)" />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
+              <BarChart data={carreraStats} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} />
+                <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e2e8f0" }} />
                 <Legend />
-                <Bar dataKey="estudiantes" fill={CHART_COLORS[1]} name="Estudiantes" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="docentes" fill={CHART_COLORS[0]} name="Docentes" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="docentes" name="Docentes" fill="#1a6b3c" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="estudiantes" name="Estudiantes" fill="#22c55e" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
+      {/* Pending review summary for secretaria / admin */}
+      {(rol === "super_admin" || rol === "secretaria") && (
+        <Card className="border-[#e2e8f0]">
           <CardHeader>
-            <CardTitle>Estado global de entregas</CardTitle>
-            <CardDescription>Silabos, informes y documentos</CardDescription>
+            <CardTitle className="text-[#0f172a]">Elementos pendientes de revision</CardTitle>
+            <CardDescription>Acciones requeridas agrupadas por modulo</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div>
-                <p className="text-2xl font-semibold">{silabos.length}</p>
-                <p className="text-xs text-muted-foreground">Silabos</p>
-                <StatusBadge estado="aprobado" className="mt-2" />
-                <p className="mt-1 text-xs">{silabos.filter((s) => s.estado === "aprobado").length} aprobados</p>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{informes.length}</p>
-                <p className="text-xs text-muted-foreground">Informes</p>
-                <StatusBadge estado="pendiente" className="mt-2" />
-                <p className="mt-1 text-xs">{informes.filter((i) => i.estado === "pendiente").length} en revision</p>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold">{documentos.length}</p>
-                <p className="text-xs text-muted-foreground">Documentos</p>
-                <StatusBadge estado="rechazado" className="mt-2" />
-                <p className="mt-1 text-xs">{documentos.filter((d) => d.estado === "rechazado").length} rechazados</p>
-              </div>
-            </div>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={[
+                { name: "Silabos", value: n(pendSil) },
+                { name: "Informes", value: n(pendInf) },
+                { name: "Documentos", value: n(pendDocs) },
+                { name: "Justificaciones", value: n(pendJust) },
+              ]} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={100} />
+                <Tooltip />
+                <Bar dataKey="value" name="Pendientes" fill="#f59e0b" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   )
 }

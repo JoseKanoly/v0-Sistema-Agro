@@ -2,107 +2,64 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import type { Usuario, UserRole } from "@/lib/types/database"
-import { useData } from "@/lib/mock/store"
+import type { Usuario } from "@/lib/types/database"
+import { usuariosMock, CORREO_DOCENTE_RE, CORREO_ESTUDIANTE_RE } from "@/lib/mock/users"
 
-const STORAGE_KEY = "sispaa.session.userId"
+const STORAGE_KEY = "sisacad.session.correo"
 
 interface AuthContextValue {
   user: Usuario | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>
+  signIn: (correo: string) => Promise<{ ok: true } | { ok: false; error: string }>
   signOut: () => void
-  registerEstudianteDocente: (
-    data: Pick<Usuario, "nombres" | "apellidos" | "email" | "password" | "cedula"> & { carrera_id: Usuario["carrera_id"] },
-  ) => Promise<{ ok: true } | { ok: false; error: string }>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const STUDENT_DOMAIN = "@live.uleam.edu.ec"
-const STAFF_DOMAIN = "@uleam.edu.ec"
-
-function detectRoleFromEmail(email: string): UserRole | null {
-  const e = email.toLowerCase().trim()
-  if (e.endsWith(STUDENT_DOMAIN)) return "estudiante"
-  if (e.endsWith(STAFF_DOMAIN)) return "docente"
-  return null
+function validarCorreo(correo: string) {
+  const e = correo.toLowerCase().trim()
+  return CORREO_DOCENTE_RE.test(e) || CORREO_ESTUDIANTE_RE.test(e)
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { usuarios, setUsuarios } = useData()
-  const [userId, setUserId] = useState<string | null>(null)
+  const [user, setUser] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // Restaurar sesion al montar
+  // Restaurar sesión al montar (100% local, sin backend)
   useEffect(() => {
     if (typeof window === "undefined") return
     const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (saved) setUserId(saved)
+    if (saved) {
+      const found = usuariosMock.find((u) => u.correo.toLowerCase() === saved.toLowerCase())
+      if (found) setUser(found)
+    }
     setLoading(false)
   }, [])
 
-  const user = userId ? usuarios.find((u) => u.id === userId) ?? null : null
-
-  const signIn = useCallback<AuthContextValue["signIn"]>(
-    async (email, password) => {
-      const found = usuarios.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase().trim() && u.password === password,
-      )
-      if (!found) return { ok: false, error: "Credenciales invalidas." }
-      if (!found.activo) return { ok: false, error: "Tu cuenta esta desactivada." }
-      window.localStorage.setItem(STORAGE_KEY, found.id)
-      setUserId(found.id)
-      return { ok: true }
-    },
-    [usuarios],
-  )
+  const signIn = useCallback<AuthContextValue["signIn"]>(async (correo) => {
+    const e = correo.toLowerCase().trim()
+    if (!validarCorreo(e)) {
+      return {
+        ok: false,
+        error: "Correo inválido. Use formato nombre.apellido@uleam.edu.ec o eXXXXXXXXXX@live.uleam.edu.ec",
+      }
+    }
+    const found = usuariosMock.find((u) => u.correo.toLowerCase() === e)
+    if (!found) return { ok: false, error: "No existe un usuario con ese correo." }
+    if (found.estado !== "activo") return { ok: false, error: "La cuenta está inactiva." }
+    window.localStorage.setItem(STORAGE_KEY, found.correo)
+    setUser(found)
+    return { ok: true }
+  }, [])
 
   const signOut = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY)
-    setUserId(null)
-    router.push("/auth/login")
+    setUser(null)
+    router.push("/login")
   }, [router])
 
-  const registerEstudianteDocente = useCallback<AuthContextValue["registerEstudianteDocente"]>(
-    async (data) => {
-      const rol = detectRoleFromEmail(data.email)
-      if (!rol) {
-        return {
-          ok: false,
-          error: `Usa un correo institucional: ${STAFF_DOMAIN} (docente) o ${STUDENT_DOMAIN} (estudiante).`,
-        }
-      }
-      const exists = usuarios.some((u) => u.email.toLowerCase() === data.email.toLowerCase())
-      if (exists) return { ok: false, error: "Ya existe una cuenta con ese correo." }
-
-      const nuevo: Usuario = {
-        id: `u-${rol}-${Date.now()}`,
-        cedula: data.cedula,
-        nombres: data.nombres,
-        apellidos: data.apellidos,
-        email: data.email,
-        password: data.password,
-        rol,
-        carrera_id: data.carrera_id,
-        activo: true,
-        tiene_vinculacion: false,
-        tiene_investigacion: false,
-      }
-      setUsuarios((prev) => [...prev, nuevo])
-      window.localStorage.setItem(STORAGE_KEY, nuevo.id)
-      setUserId(nuevo.id)
-      return { ok: true }
-    },
-    [usuarios, setUsuarios],
-  )
-
-  return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, registerEstudianteDocente }}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={{ user, loading, signIn, signOut }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

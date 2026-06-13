@@ -1,21 +1,28 @@
 import type { Carrera } from "@/lib/types/database"
 
-export const CARRERAS: Carrera[] = [
+export const carrerasMock: Carrera[] = [
   {
-    id: "agropecuaria",
-    nombre: "Ingenieria Agropecuaria",
-    descripcion: "Carrera enfocada en produccion agricola y pecuaria sostenible.",
+    id: 1,
+    nombre: "Ingeniería Agroindustrial",
+    siglas: "AGRIND",
+    facultad: "Ciencias Agropecuarias",
+    coordinador: "Ing. Marco Cedeño",
+    estado: "activo",
   },
   {
-    id: "agronegocios",
-    nombre: "Ingenieria en Agronegocios",
-    descripcion: "Gestion empresarial y comercial del sector agroalimentario.",
+    id: 2,
+    nombre: "Ingeniería Agropecuaria",
+    siglas: "AGROP",
+    facultad: "Ciencias Agropecuarias",
+    coordinador: "Ing. Lucía Vera",
+    estado: "activo",
   },
   {
-    id: "agroindustria",
-    nombre: "Ingenieria en Agroindustria",
-    descripcion: "Procesamiento y transformacion industrial de productos agricolas.",
+    id: 3,
+    nombre: "Ingeniería en Agronegocios",
+    siglas: "AGRONEG",
+    facultad: "Ciencias Administrativas",
+    coordinador: "Econ. Pablo Mendoza",
+    estado: "activo",
   },
 ]
-
-export const PERIODO_ACTUAL = "2026-1"

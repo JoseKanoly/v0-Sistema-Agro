@@ -6,8 +6,9 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "SISPAA | Sistema de Gestion Academica",
-  description: "Plataforma de gestion academica universitaria: docencia, vinculacion, investigacion y titulacion.",
+  title: "Sistema Académico | Gestión Universitaria",
+  description:
+    "Plataforma integral de gestión académica universitaria: docencia, estudiantes, laboratorio, vinculación, investigación y titulación.",
 }
 
 export const viewport: Viewport = {

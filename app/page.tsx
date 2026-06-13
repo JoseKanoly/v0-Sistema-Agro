@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation"
-import { getSession } from "@/app/actions/auth"
+import { getCurrentPerfil } from "@/app/actions/auth"
 
 export default async function Home() {
-  const session = await getSession()
-  if (session?.user) redirect("/dashboard")
+  const data = await getCurrentPerfil()
+  if (data?.user) redirect("/dashboard")
   redirect("/auth/login")
 }

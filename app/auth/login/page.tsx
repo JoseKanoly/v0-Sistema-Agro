@@ -2,150 +2,137 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Sprout, KeyRound, Mail, User2 } from "lucide-react"
-import { useAuth } from "@/lib/auth/auth-context"
-import { CREDENCIALES_DEMO } from "@/lib/mock/users"
+import { authClient } from "@/lib/auth-client"
+import { GraduationCap, Eye, EyeOff, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email || !password) { toast.error("Complete todos los campos"); return }
     setLoading(true)
-    setError(null)
-    const result = await signIn(email, password)
-    setLoading(false)
-    if (result.ok) router.push("/dashboard")
-    else setError(result.error)
-  }
-
-  const usarCuenta = (mail: string, pass: string) => {
-    setEmail(mail)
-    setPassword(pass)
+    try {
+      const res = await authClient.signIn.email({ email, password })
+      if (res.error) {
+        toast.error("Credenciales incorrectas. Verifique su correo y contrasena.")
+      } else {
+        toast.success("Sesion iniciada correctamente")
+        router.push("/dashboard")
+        router.refresh()
+      }
+    } catch {
+      toast.error("Error al conectar con el servidor")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Panel izquierdo - branding */}
-      <div className="hidden flex-col justify-between bg-primary p-10 text-primary-foreground lg:flex">
+    <div className="min-h-screen bg-[#f4f6f9] flex">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex w-1/2 bg-[#0f2419] flex-col justify-between p-12">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-foreground/10">
-            <Sprout className="h-6 w-6" />
+          <div className="w-10 h-10 rounded-xl bg-[#22c55e] flex items-center justify-center">
+            <GraduationCap className="w-6 h-6 text-[#0f2419]" />
           </div>
           <div>
-            <p className="text-lg font-semibold">SISPAA</p>
-            <p className="text-xs opacity-80">Facultad de Agronomia - ULEAM</p>
+            <p className="text-[#d1fae5] font-bold text-lg leading-tight">SISPAA</p>
+            <p className="text-[#6b9a7f] text-xs">Sistema de Gestion Academica</p>
           </div>
         </div>
-
-        <div className="space-y-4">
-          <h2 className="text-3xl font-semibold text-balance">
-            Sistema Integral de Seguimiento de Procesos Academicos
-          </h2>
-          <p className="text-sm opacity-80 text-pretty">
-            Gestion centralizada de docencia, vinculacion con la sociedad, investigacion y procesos de titulacion.
-            Acceso por rol para super administrador, coordinadores, docentes, secretaria y estudiantes.
+        <div className="space-y-6">
+          <h1 className="text-4xl font-bold text-[#d1fae5] leading-tight text-balance">
+            Gestion academica integral para su institucion
+          </h1>
+          <p className="text-[#6b9a7f] text-lg leading-relaxed text-pretty">
+            Plataforma unificada para docentes, estudiantes, coordinadores y secretaria.
           </p>
-        </div>
-
-        <div className="space-y-3 rounded-lg bg-primary-foreground/5 p-4 text-xs">
-          <p className="font-medium">Cuentas de demostracion</p>
-          <div className="grid gap-2">
-            {CREDENCIALES_DEMO.map((c) => (
-              <button
-                key={c.email}
-                onClick={() => usarCuenta(c.email, c.password)}
-                className="flex items-center justify-between gap-3 rounded-md bg-primary-foreground/5 px-3 py-2 text-left hover:bg-primary-foreground/10"
-              >
-                <span className="flex items-center gap-2">
-                  <User2 className="h-3.5 w-3.5 opacity-70" />
-                  <span className="font-medium">{c.rol}</span>
-                </span>
-                <span className="opacity-70">{c.email}</span>
-              </button>
+          <div className="grid grid-cols-2 gap-3">
+            {["Docencia", "Vinculacion", "Investigacion", "Titulacion", "Laboratorios", "Reportes"].map((m) => (
+              <div key={m} className="bg-[#1a3d27] rounded-xl p-3 border border-[#1e3a2a]">
+                <p className="text-[#22c55e] font-semibold text-sm">{m}</p>
+              </div>
             ))}
           </div>
-          <p className="opacity-70">Clave comun: <code className="font-mono">Sispaa2026!</code></p>
         </div>
+        <p className="text-[#4a6b56] text-sm">&copy; {new Date().getFullYear()} SISPAA. Todos los derechos reservados.</p>
       </div>
 
-      {/* Panel derecho - login */}
-      <div className="flex items-center justify-center bg-background p-6 md:p-10">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-2">
-            <CardTitle className="text-2xl">Iniciar sesion</CardTitle>
-            <CardDescription>Ingresa tus credenciales institucionales para continuar.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo institucional</Label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="tu.correo@uleam.edu.ec"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="pl-9"
-                  />
-                </div>
+      {/* Right login panel */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden flex items-center gap-2 mb-8">
+            <div className="w-9 h-9 rounded-xl bg-[#1a6b3c] flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
+            <p className="font-bold text-[#0f172a]">SISPAA</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e2e8f0] p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-[#0f172a]">Iniciar sesion</h2>
+              <p className="text-sm text-[#64748b] mt-1">Ingrese su correo institucional y contrasena</p>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-sm font-medium text-[#0f172a]">Correo institucional</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="usuario@uleam.edu.ec"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-10 border-[#e2e8f0]"
+                  autoComplete="email"
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contrasena</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-sm font-medium text-[#0f172a]">Contrasena</Label>
                 <div className="relative">
-                  <KeyRound className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
-                    autoComplete="current-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="pl-9"
+                    className="h-10 border-[#e2e8f0] pr-10"
+                    autoComplete="current-password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#0f172a]"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
-              {error ? (
-                <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
-              ) : null}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Ingresando..." : "Ingresar"}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-10 bg-[#1a6b3c] hover:bg-[#155730] text-white font-semibold"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Ingresando...
+                  </span>
+                ) : "Ingresar al sistema"}
               </Button>
             </form>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-2 text-sm text-muted-foreground">
-            <p>
-              No tienes cuenta?{" "}
-              <Link href="/auth/sign-up" className="font-medium text-primary hover:underline">
-                Registrate
-              </Link>
-            </p>
-            <p className="text-xs">
-              Solo el super administrador puede crear cuentas de secretaria y coordinador.
-            </p>
-          </CardFooter>
-        </Card>
+          </div>
+          <p className="text-center text-xs text-[#94a3b8] mt-4">
+            El administrador del sistema gestiona el acceso de usuarios.
+          </p>
+        </div>
       </div>
     </div>
   )

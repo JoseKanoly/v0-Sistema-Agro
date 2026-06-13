@@ -1,16 +1,16 @@
-# Credenciales de Prueba - SISPAA
+# Credenciales de Acceso - Sistema SISPAA
 
 ## Sistema de Gestión Académica
 
-Estas son las credenciales predefinidas para acceder a la plataforma en entorno de desarrollo.
+Estas son las credenciales creadas en la base de datos Neon para acceder a la plataforma.
 
 ---
 
-## 👤 Super Administrador
+## Super Administrador
 **Rol:** Super Admin (Acceso Total)
 
 ```
-Email:    superadmin@sispaa.edu.ec
+Email:    marco.zambrano@uleam.edu.ec
 Password: SuperAdmin1234
 ```
 
@@ -22,11 +22,11 @@ Password: SuperAdmin1234
 
 ---
 
-## 🔐 Administrador
+## Administrador
 **Rol:** Admin
 
 ```
-Email:    admin@sispaa.edu.ec
+Email:    marco.admin@uleam.edu.ec
 Password: Admin1234
 ```
 
@@ -38,11 +38,11 @@ Password: Admin1234
 
 ---
 
-## 👨‍🏫 Docente
+## Docente
 **Rol:** Docente
 
 ```
-Email:    docente@sispaa.edu.ec
+Email:    marco.docente@uleam.edu.ec
 Password: Docente1234
 ```
 
@@ -55,11 +55,11 @@ Password: Docente1234
 
 ---
 
-## 📋 Coordinador
+## Coordinador
 **Rol:** Coordinador
 
 ```
-Email:    coordinador@sispaa.edu.ec
+Email:    marco.coordinador@uleam.edu.ec
 Password: Coordinador1234
 ```
 
@@ -71,11 +71,11 @@ Password: Coordinador1234
 
 ---
 
-## 🎓 Estudiante
+## Estudiante
 **Rol:** Estudiante
 
 ```
-Email:    estudiante@sispaa.edu.ec
+Email:    e1317851911@live.uleam.edu.ec
 Password: Estudiante1234
 ```
 
@@ -118,5 +118,7 @@ Para cambiar la contraseña:
 
 ---
 
-**Última actualización:** 2026-01-13  
-**Plataforma:** SISPAA v1.0
+**Última actualización:** 2026-06-13  
+**Plataforma:** SISPAA v1.0  
+**Base de Datos:** Neon Postgres  
+**Autenticación:** Better Auth con scrypt hashing

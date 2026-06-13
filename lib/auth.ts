@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { pool } from '@/lib/db'
 
+// Force recompile - v1
 const getBaseURL = () => {
   if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL)
@@ -12,13 +13,16 @@ const getBaseURL = () => {
 
 const baseURL = getBaseURL()
 
-const trustedOrigins: string[] = []
-if (process.env.V0_RUNTIME_URL) trustedOrigins.push(process.env.V0_RUNTIME_URL)
-if (process.env.VERCEL_URL) trustedOrigins.push(`https://${process.env.VERCEL_URL}`)
+// Build trusted origins - always include baseURL + all environment URLs
+// In development/v0 preview, also trust localhost for local testing
+const trustedOrigins = new Set<string>([baseURL])
+if (process.env.V0_RUNTIME_URL) trustedOrigins.add(process.env.V0_RUNTIME_URL)
+if (process.env.VERCEL_URL) trustedOrigins.add(`https://${process.env.VERCEL_URL}`)
 if (process.env.VERCEL_PROJECT_PRODUCTION_URL)
-  trustedOrigins.push(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`)
-// Always trust the base URL itself
-if (baseURL && !trustedOrigins.includes(baseURL)) trustedOrigins.push(baseURL)
+  trustedOrigins.add(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`)
+// Always trust localhost for development
+trustedOrigins.add('http://localhost:3000')
+trustedOrigins.add('https://localhost:3000')
 
 export const auth = betterAuth({
   database: pool,
@@ -27,15 +31,21 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
   },
-  trustedOrigins,
+  trustedOrigins: Array.from(trustedOrigins),
   session: {
-    expiresIn: 60 * 60 * 24 * 7,
-    updateAge: 60 * 60 * 24,
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // 1 day
   },
-  advanced: {
-    defaultCookieAttributes: {
-      sameSite: 'none' as const,
-      secure: true,
-    },
-  },
+  ...(process.env.NODE_ENV === 'development'
+    ? {
+        advanced: {
+          // In dev (v0 preview iframe), force cross-site cookies so the
+          // session cookie is stored by the browser.
+          defaultCookieAttributes: {
+            sameSite: 'none' as const,
+            secure: true,
+          },
+        },
+      }
+    : {}),
 })

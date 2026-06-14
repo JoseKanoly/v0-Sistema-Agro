@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, BookOpen, Bell, GraduationCap, LogOut, LayoutDashboard } from "lucide-react"
+import { FileText, BookOpen, Bell, GraduationCap, LogOut } from "lucide-react"
 import Link from "next/link"
 
 export default async function DashboardPage() {
@@ -15,14 +15,6 @@ export default async function DashboardPage() {
     { name: "Notificaciones", href: "/dashboard/notificaciones", icon: Bell },
     { name: "Mis Documentos", href: "/dashboard/mis-documentos", icon: FileText },
   ]
-
-  // Show coordinación menu item for COORDINADOR, ADMINISTRADOR, and SUPER_ADMIN roles
-  const isCoordinator = ["COORDINADOR", "ADMINISTRADOR", "SUPER_ADMIN"].includes(
-    session.user.role || ""
-  )
-  if (isCoordinator) {
-    menuItems.unshift({ name: "Coordinación", href: "/dashboard/coordinacion", icon: LayoutDashboard })
-  }
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] p-6">
